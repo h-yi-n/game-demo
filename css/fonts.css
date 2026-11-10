@@ -1,0 +1,49 @@
+/* ============================================================
+   fonts.css — 设计稿字体子集
+   由 tools/build_fonts.py 生成，不要手改。改了文案请重跑脚本。
+   ============================================================ */
+
+/* 造字工房叮叮 · C1 开屏标题 */
+@font-face {
+  font-family: "GG-DingDing";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../assets/fonts/dingding.woff2") format("woff2");
+}
+
+/* 造字工房悦黑 · C2 章名 / 侧标题 */
+@font-face {
+  font-family: "GG-YueHei";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../assets/fonts/yuehei.woff2") format("woff2");
+}
+
+/* 造字工房朗倩 · 大数字 / 环编号 */
+@font-face {
+  font-family: "GG-LangQian";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../assets/fonts/langqian.woff2") format("woff2");
+}
+
+/* 汉仪旗黑 · 标签 / 提示 / 正文 */
+@font-face {
+  font-family: "GG-QiHei";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../assets/fonts/qihei.woff2") format("woff2");
+}
+
+/* ABeeZee · 拉丁小字（lv.01 等） */
+@font-face {
+  font-family: "GG-ABeeZee";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../assets/fonts/abeezee.woff2") format("woff2");
+}

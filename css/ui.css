@@ -1,0 +1,1436 @@
+/* ============================================================
+   ui.css — C1 / C2 / C3 视觉接入
+   所有颜色、字号、间距、圆角都来自 tokens.css。
+   本轮只有静态视觉，不包含动画。
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.stage {
+  position: relative;
+  width: min(100vw, calc(100vh * var(--stage-ratio)));
+  aspect-ratio: var(--stage-ratio);
+  overflow: hidden;
+  container-type: inline-size;
+  background: var(--page-bg);
+}
+
+.screen-root {
+  position: absolute;
+  inset: 0;
+  --du: calc(100vw / 1440);
+}
+
+@supports (container-type: inline-size) {
+  .screen-root {
+    --du: calc(100cqw / 1440);
+  }
+}
+
+.overlay-root {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+
+.overlay-root:empty {
+  display: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: var(--lw-hair);
+  height: var(--lw-hair);
+  padding: 0;
+  margin: calc(-1 * var(--lw-hair));
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.scr {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--on-g-1);
+  font-family: var(--font-sans);
+}
+
+.scr button {
+  font: inherit;
+}
+
+.scr img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.ic {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ic path,
+.ic circle,
+.ic rect {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.scene-bg {
+  position: absolute;
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+   C1 · 开屏
+   ------------------------------------------------------------ */
+
+.scr-c1 {
+  background: var(--g-deep);
+}
+
+.c1-bg {
+  left: calc(var(--c1-bg-x) * var(--du));
+  top: calc(var(--c1-bg-y) * var(--du));
+  width: calc(var(--c1-bg-w) * var(--du));
+  height: calc(var(--c1-bg-h) * var(--du));
+  object-fit: fill;
+}
+
+.c1-start {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.c1-switch {
+  position: absolute;
+  left: calc(var(--c1-switch-x) * var(--du));
+  top: calc(var(--c1-switch-y) * var(--du));
+  width: calc((var(--c1-switch-icon) + var(--c1-switch-label-w)) * var(--du));
+  height: calc(var(--c1-switch-icon) * var(--du));
+  z-index: 3;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--on-g-1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.c1-switch-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--c1-switch-icon) * var(--du));
+  height: calc(var(--c1-switch-icon) * var(--du));
+  display: grid;
+  place-items: center;
+}
+
+.c1-switch-icon .ic {
+  width: calc(var(--c1-switch-glyph) * var(--du));
+  height: calc(var(--c1-switch-glyph) * var(--du));
+  transform: translateY(calc(var(--c1-switch-icon-dy) * var(--du)));
+}
+
+.c1-switch-label {
+  position: absolute;
+  left: calc(var(--c1-switch-label-cx) * var(--du));
+  top: calc(var(--c1-switch-label-cy) * var(--du));
+  width: max-content;
+  height: calc(var(--c1-switch-label-h) * var(--du));
+  transform: translate(-50%, -50%);
+  font-family: var(--font-figma-label);
+  font-size: var(--fs-c1-switch);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-meta);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.c1-title {
+  position: absolute;
+  left: calc(var(--c1-title-cx) * var(--du));
+  top: calc(var(--c1-title-cy) * var(--du));
+  width: max-content;
+  height: auto;
+  z-index: 2;
+  margin: 0;
+  font-family: var(--font-figma-display);
+  font-size: var(--fs-c1-title);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c1-title);
+  letter-spacing: var(--tr-c1-title);
+  text-align: center;
+  text-indent: var(--tr-c1-title);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.c1-hint {
+  position: absolute;
+  left: calc(var(--c1-hint-cx) * var(--du));
+  top: calc(var(--c1-hint-cy) * var(--du));
+  width: max-content;
+  height: calc(var(--c1-hint-h) * var(--du));
+  z-index: 2;
+  margin: 0;
+  font-family: var(--font-figma-label);
+  font-size: var(--fs-c1-hint);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c1-hint);
+  letter-spacing: var(--tr-c1-hint);
+  text-align: center;
+  text-indent: var(--tr-c1-hint);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.c1-start:focus-visible,
+.c1-switch:focus-visible {
+  outline: var(--lw-emph) solid var(--on-g-1);
+  outline-offset: calc(-1 * var(--sp-2));
+}
+
+/* 镜头包裹层：底图与鲸鱼必须同乘一个变换，否则底图放大时
+   烘焙在底图里的鲸鱼会从图层底下移出来 */
+.c1-cam {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  transform-origin: var(--c1-cam-origin-x) var(--c1-cam-origin-y);
+  animation: anim-cam var(--anim-cam-dur) var(--anim-ease-breath) infinite;
+}
+
+.c1-whale {
+  position: absolute;
+  left: calc(var(--c1-whale-x) * var(--du));
+  top: calc(var(--c1-whale-y) * var(--du));
+  width: calc(var(--c1-whale-w) * var(--du));
+  height: calc(var(--c1-whale-h) * var(--du));
+  z-index: -1;
+  pointer-events: none;
+  animation: anim-whale-drift var(--anim-whale-dur) var(--anim-ease-breath) infinite;
+}
+
+.c1-sheen {
+  position: absolute;
+  left: calc(var(--c1-sheen-x) * var(--du));
+  top: calc(var(--c1-sheen-y) * var(--du));
+  width: calc(var(--c1-sheen-w) * var(--du));
+  height: calc(var(--c1-sheen-h) * var(--du));
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    var(--c1-sheen-a) 47%,
+    var(--c1-sheen-b) 55%,
+    transparent 70%
+  );
+  mix-blend-mode: soft-light;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 22%, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 22%, black 100%);
+  animation: anim-sheen var(--anim-sheen-dur) var(--anim-ease-breath) infinite;
+}
+
+/* 三个元素的入场 —— 一律写成新增的独立规则，不要改动上面已有的 .c1-* 规则 */
+.c1-title {
+  animation: anim-rise-in var(--anim-title-dur) var(--anim-ease-soft)
+    var(--anim-title-delay) backwards;
+}
+
+.c1-hint {
+  animation: anim-breathe var(--anim-hint-dur) var(--anim-ease-breath)
+    var(--anim-hint-delay) infinite;
+}
+
+.c1-switch {
+  opacity: var(--anim-switch-idle);
+  transition: opacity 250ms linear;
+  animation: anim-fade-in var(--anim-switch-dur) var(--anim-ease-soft)
+    var(--anim-switch-delay) backwards;
+}
+
+.c1-switch:hover,
+.c1-switch:focus-visible {
+  opacity: 1;
+}
+
+/* 退场：挂在整屏上，和 .c1-cam 的动画互不干扰 */
+.scr-c1.is-leaving {
+  animation: anim-exit var(--anim-exit-dur) var(--anim-ease-soft) forwards;
+}
+
+/* ------------------------------------------------------------
+   C2 · 主界面
+   ------------------------------------------------------------ */
+
+.scr-c2 {
+  background: var(--g-mid);
+}
+
+.c2-bg {
+  left: calc(var(--c2-bg-x) * var(--du));
+  top: calc(var(--c2-bg-y) * var(--du));
+  width: calc(var(--c2-bg-w) * var(--du));
+  height: calc(var(--c2-bg-h) * var(--du));
+  object-fit: fill;
+}
+
+.c2-whale {
+  position: absolute;
+  left: calc(var(--c2-whale-x) * var(--du));
+  top: calc(var(--c2-whale-y) * var(--du));
+  width: calc(var(--c2-whale-w) * var(--du));
+  height: calc(var(--c2-whale-h) * var(--du));
+  z-index: 1;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.c2-title {
+  position: absolute;
+  left: calc(var(--c2-title-x) * var(--du));
+  top: calc(var(--c2-title-y) * var(--du));
+  width: calc(var(--c2-title-w) * var(--du));
+  height: calc(var(--c2-title-h) * var(--du));
+  z-index: 4;
+}
+
+.c2-title__meta {
+  position: absolute;
+  left: calc(var(--c2-meta-cx) * var(--du));
+  top: calc(var(--c2-meta-cy) * var(--du));
+  width: max-content;
+  height: calc(var(--c2-meta-h) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-label);
+  font-size: var(--fs-c2-meta);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-meta);
+  letter-spacing: var(--tr-c2-meta);
+  text-align: center;
+  text-indent: var(--tr-c2-meta);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.c2-title__level {
+  position: absolute;
+  left: calc(var(--c2-level-cx) * var(--du));
+  top: calc(var(--c2-level-cy) * var(--du));
+  width: max-content;
+  height: calc(var(--c2-level-h) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-latin);
+  font-size: var(--fs-c2-level);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-meta);
+  letter-spacing: var(--tr-c2-level);
+  text-align: center;
+  text-indent: var(--tr-c2-level);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.c2-title__rule-v {
+  position: absolute;
+  left: calc(var(--c2-rule-v-x) * var(--du));
+  top: calc(var(--c2-rule-v-y) * var(--du));
+  width: 0;
+  height: calc(var(--c2-rule-v-h) * var(--du));
+  border-left: var(--lw-emph) solid var(--on-g-1);
+}
+
+.c2-title__rule-h {
+  position: absolute;
+  left: calc(var(--c2-rule-h-x) * var(--du));
+  top: calc(var(--c2-rule-h-y) * var(--du));
+  width: calc(var(--c2-rule-h-w) * var(--du));
+  height: 0;
+  border-top: var(--c2-rule-h-stroke) solid var(--on-g-1);
+}
+
+.c2-title__hero {
+  position: absolute;
+  left: calc(
+    (var(--c2-hero-cx) + var(--c2-hero-dx, 0)) * var(--du)
+  );
+  top: calc(var(--c2-hero-cy) * var(--du));
+  width: max-content;
+  height: calc(var(--c2-hero-h) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-number);
+  font-size: var(--fs-c2-hero);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-hero);
+  letter-spacing: calc(var(--c2-hero-tr, 0) * var(--du));
+  text-align: center;
+  text-indent: calc(var(--c2-hero-tr, 0) * var(--du));
+  white-space: nowrap;
+  transform: translate(-50%, -50%) scaleX(var(--c2-hero-sx, 1));
+}
+
+.c2-title__name {
+  position: absolute;
+  left: calc(
+    (var(--c2-name-cx) + var(--c2-name-dx, 0)) * var(--du)
+  );
+  top: calc(var(--c2-name-cy) * var(--du));
+  width: max-content;
+  height: calc(var(--c2-name-h) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-c2-title);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-title);
+  letter-spacing: var(--tr-c2-title);
+  text-align: center;
+  text-indent: var(--tr-c2-title);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.c2-title[data-sea="0"] .c2-title__hero {
+  --c2-hero-sx: var(--c2-hero-sx-one);
+  --c2-hero-tr: var(--c2-hero-tr-one);
+  --c2-hero-dx: var(--c2-hero-dx-one);
+}
+
+.c2-title[data-sea="1"] .c2-title__hero {
+  --c2-hero-sx: var(--c2-hero-sx-two);
+  --c2-hero-tr: var(--c2-hero-tr-two);
+  --c2-hero-dx: var(--c2-hero-dx-two);
+}
+
+.c2-title[data-sea="2"] .c2-title__hero {
+  --c2-hero-sx: var(--c2-hero-sx-three);
+  --c2-hero-tr: var(--c2-hero-tr-three);
+  --c2-hero-dx: var(--c2-hero-dx-three);
+}
+
+.c2-title[data-sea="0"] .c2-title__name {
+  --c2-name-dx: var(--c2-name-dx-one);
+}
+
+.c2-title[data-sea="1"] .c2-title__name {
+  --c2-name-dx: var(--c2-name-dx-two);
+}
+
+.c2-title[data-sea="2"] .c2-title__name {
+  --c2-name-dx: var(--c2-name-dx-three);
+}
+
+.c2-side-title {
+  position: absolute;
+  left: calc(var(--c2-side-title-cx) * var(--du));
+  top: calc(var(--c2-side-title-cy) * var(--du));
+  /* 设计稿盒宽 200（见 --c2-side-title-w），但 96px×2字+字距 = 207.4px，
+     装不下。盒子跟着字走，不要反过来让字迁就盒子 —— 否则每行只塞一个字。 */
+  width: max-content;
+  height: calc(var(--c2-side-title-h) * var(--du));
+  z-index: 5;
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-c2-title);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-title);
+  letter-spacing: var(--tr-c2-title);
+  text-align: center;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.c2-side-line {
+  display: block;
+  width: max-content;
+  text-align: center;
+  text-indent: var(--tr-c2-title);
+  white-space: nowrap;
+}
+
+/* C2 底部工具入口 */
+.c2-tools {
+  position: absolute;
+  left: calc(var(--c2-tool-x) * var(--du));
+  top: calc(var(--c2-tool-y) * var(--du));
+  z-index: 10;
+  display: flex;
+  gap: calc(var(--c2-tool-gap) * var(--du));
+}
+
+.c2-tool {
+  width: calc(var(--c2-tool-size) * var(--du));
+  height: calc(var(--c2-tool-size) * var(--du));
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--on-g-1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.c2-tool__icon {
+  width: calc(var(--c2-tool-icon) * var(--du));
+  height: calc(var(--c2-tool-icon) * var(--du));
+  display: block;
+}
+
+.c2-tool:focus-visible,
+.ring-slot:focus-visible,
+.c2-mini:focus-visible,
+.figma-back:focus-visible {
+  outline: var(--lw-emph) solid var(--on-g-1);
+  outline-offset: var(--sp-2);
+}
+
+/* 气泡环基础层 */
+.ring-slot {
+  position: absolute;
+  z-index: 5;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--on-g-1);
+  overflow: visible;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ring-slot:disabled {
+  cursor: default;
+}
+
+.ring-float {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ring-bubble {
+  --ring-fill: var(--glass-fill);
+  --ring-rim: var(--glass-rim);
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: var(--glass-ring-main) solid var(--glass-rim);
+  border-radius: var(--r-full);
+  background:
+    radial-gradient(
+      circle at 30% 22%,
+      var(--glass-highlight) 0%,
+      var(--ring-fill) 18%,
+      var(--ring-fill) 48%,
+      var(--glass-shadow) 100%
+    );
+  box-shadow: inset 0 0 var(--ring-inset-blur) var(--ring-inset-spread)
+    var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+    contrast(var(--glass-contrast));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate)) contrast(var(--glass-contrast));
+}
+
+.ring-slot.is-current .ring-bubble {
+  --ring-fill: var(--glass-fill-strong);
+  border-color: var(--glass-rim-strong);
+}
+
+.ring-slot:disabled .ring-bubble {
+  border-color: var(--glass-rim);
+}
+
+.ring-preview {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: var(--r-full);
+  -webkit-mask-image: radial-gradient(
+    circle closest-side,
+    black 72%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(circle closest-side, black 72%, transparent 100%);
+}
+
+.ring-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-preview-veil);
+  pointer-events: none;
+}
+
+.ring-slot.is-current .ring-preview::after {
+  background: var(--glass-preview-veil-current);
+}
+
+.ring-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+}
+
+.ring-index {
+  position: absolute;
+  left: calc(50% + var(--ring-index-dx, 0) * var(--du));
+  top: calc(50% + var(--ring-index-dy, 0) * var(--du));
+  z-index: 3;
+  margin: 0;
+  color: var(--ring-index-ink);
+  text-align: center;
+  text-indent: var(--ring-index-tracking, 0);
+  transform: translate(-50%, -50%);
+  font-family: var(--font-figma-number);
+  font-size: var(--fs-c2-index);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-index);
+  letter-spacing: var(--tr-c2-index);
+  white-space: nowrap;
+  text-shadow: 0 0 var(--glass-inner-shadow) var(--glass-shadow);
+}
+
+.c2-ring--one,
+.c2-ring--two,
+.c2-ring--three,
+.c2-ring--extra {
+  width: calc(var(--c2-ring-size) * var(--du));
+  height: calc(var(--c2-ring-size) * var(--du));
+}
+
+.c2-ring--one {
+  left: calc(var(--c2-ring-one-x) * var(--du));
+  top: calc(var(--c2-ring-one-y) * var(--du));
+  z-index: 8;
+}
+
+.c2-ring--two {
+  left: calc(var(--c2-ring-two-x) * var(--du));
+  top: calc(var(--c2-ring-two-y) * var(--du));
+  z-index: 7;
+}
+
+.c2-ring--three {
+  left: calc(var(--c2-ring-three-x) * var(--du));
+  top: calc(var(--c2-ring-three-y) * var(--du));
+  z-index: 6;
+}
+
+.c2-ring--extra {
+  left: calc(var(--c2-ring-extra-x) * var(--du));
+  top: calc(var(--c2-ring-extra-y) * var(--du));
+  z-index: 6;
+  width: calc(var(--c2-ring-extra-size) * var(--du));
+  height: calc(var(--c2-ring-extra-size) * var(--du));
+}
+
+.c2-ring--extra .ring-bubble {
+  border-width: var(--lw-emph);
+}
+
+/*
+ * C2 玻璃环壁：不使用 border 铺满 28px，否则实色边框会盖住
+ * backdrop-filter。壁由环边的径向 alpha 亮带构成，内部玻璃仍沿用
+ * --ring-fill 的那层渐变；透出去的背景高光让左上自然更亮。
+ */
+.scr-c2 .ring-bubble {
+  border: 0;
+  background:
+    radial-gradient(
+      circle closest-side at 50% 50%,
+      transparent 0 calc(100% - var(--glass-ring-main)),
+      color-mix(in srgb, var(--ring-rim) 26%, transparent)
+        calc(100% - var(--glass-ring-main) + 2px),
+      color-mix(in srgb, var(--ring-rim) 34%, transparent)
+        calc(100% - var(--glass-ring-main) + 10px),
+      color-mix(in srgb, var(--ring-rim) 52%, transparent)
+        calc(100% - 8px),
+      color-mix(in srgb, var(--ring-rim) 69%, transparent)
+        calc(100% - 2px),
+      color-mix(in srgb, var(--ring-rim) 77%, transparent) 100%
+    ),
+    radial-gradient(
+      circle at 30% 22%,
+      var(--glass-highlight) 0%,
+      var(--ring-fill) 18%,
+      var(--ring-fill) 48%,
+      var(--glass-shadow) 100%
+    );
+}
+
+.c2-ring-preview {
+  left: 50%;
+  top: 50%;
+  width: calc(var(--c2-preview-size) * var(--du));
+  height: calc(var(--c2-preview-size) * var(--du));
+  transform: translate(-50%, -50%);
+}
+
+.c2-ring-index--one {
+  --ring-index-dx: var(--c2-index-one-dx);
+  --ring-index-dy: var(--c2-index-one-dy);
+  --ring-index-tracking: var(--tr-c2-index);
+}
+
+.c2-ring-index--two {
+  --ring-index-dx: var(--c2-index-two-dx);
+  --ring-index-dy: var(--c2-index-two-dy);
+  --ring-index-tracking: var(--tr-c2-index);
+}
+
+.c2-ring-index--three {
+  --ring-index-dx: var(--c2-index-three-dx);
+  --ring-index-dy: var(--c2-index-three-dy);
+  --ring-index-tracking: var(--tr-c2-index);
+}
+
+/* 地图装饰：只保留设计稿中实际存在的大弧线与小气泡 */
+.c2-arc {
+  position: absolute;
+  left: calc(var(--c2-arc-x) * var(--du));
+  top: calc(var(--c2-arc-y) * var(--du));
+  width: calc(var(--c2-arc-w) * var(--du));
+  height: calc(var(--c2-arc-h) * var(--du));
+  z-index: 2;
+  overflow: visible;
+  color: var(--on-g-1);
+  pointer-events: none;
+}
+
+.c2-arc path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.c2-arc__a {
+  stroke-width: var(--c2-arc-stroke);
+  stroke-opacity: var(--c2-arc-a);
+}
+
+.c2-arc__b {
+  stroke-width: calc(var(--c2-arc-stroke) * 0.55);
+  stroke-opacity: var(--c2-arc-b);
+}
+
+.c2-arc__c {
+  stroke-width: calc(var(--c2-arc-stroke) * 0.22);
+  stroke-opacity: var(--c2-arc-c);
+  filter: blur(calc(1.5 * var(--du)));
+}
+
+.c2-bubble {
+  position: absolute;
+  z-index: 3;
+  border: var(--lw-emph) solid var(--glass-rim-strong);
+  border-radius: var(--r-full);
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 var(--glass-inner-shadow) var(--glass-highlight);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+  pointer-events: none;
+}
+
+.c2-bubble--a {
+  left: calc(var(--c2-bubble-a-x) * var(--du));
+  top: calc(var(--c2-bubble-a-y) * var(--du));
+  width: calc(var(--c2-bubble-a-size) * var(--du));
+  height: calc(var(--c2-bubble-a-size) * var(--du));
+}
+
+.c2-bubble--b {
+  left: calc(var(--c2-bubble-b-x) * var(--du));
+  top: calc(var(--c2-bubble-b-y) * var(--du));
+  width: calc(var(--c2-bubble-b-size) * var(--du));
+  height: calc(var(--c2-bubble-b-size) * var(--du));
+}
+
+.c2-bubble--c {
+  left: calc(var(--c2-bubble-c-x) * var(--du));
+  top: calc(var(--c2-bubble-c-y) * var(--du));
+  width: calc(var(--c2-bubble-c-size) * var(--du));
+  height: calc(var(--c2-bubble-c-size) * var(--du));
+}
+
+/* 海域 4–8：补足现有解锁行为，不改变 Figma 主环构图 */
+.c2-mini-row {
+  position: absolute;
+  left: calc(var(--c2-mini-x) * var(--du));
+  top: calc(var(--c2-mini-y) * var(--du));
+  z-index: 8;
+  display: flex;
+  gap: calc(var(--c2-mini-gap) * var(--du));
+}
+
+.c2-mini {
+  width: calc(var(--c2-mini-size) * var(--du));
+  height: calc(var(--c2-mini-size) * var(--du));
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: var(--lw-hair) solid var(--glass-rim);
+  border-radius: var(--r-full);
+  background: var(--glass-fill);
+  color: var(--on-g-1);
+  box-shadow: inset 0 0 var(--glass-inner-shadow) var(--glass-highlight);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+  font-family: var(--font-figma-number);
+  font-size: var(--fs-body);
+  line-height: var(--lh-none);
+  cursor: pointer;
+}
+
+.c2-mini.is-current {
+  border-color: var(--glass-rim-strong);
+  background: var(--glass-fill-strong);
+}
+
+.c2-mini:disabled {
+  border-color: var(--glass-rim-locked);
+  opacity: var(--ring-locked-opacity);
+  cursor: default;
+}
+
+.c2-complete {
+  position: absolute;
+  left: calc(var(--c2-complete-cx) * var(--du));
+  top: calc(var(--c2-complete-cy) * var(--du));
+  width: calc(var(--c2-complete-w) * var(--du));
+  height: calc(var(--c2-complete-h) * var(--du));
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border: var(--lw-hair) solid var(--glass-rim);
+  border-radius: var(--r-full);
+  background: var(--glass-fill-strong);
+  font-family: var(--font-figma-label);
+  font-size: var(--fs-body);
+  letter-spacing: var(--tr-label);
+  text-indent: 0;
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+}
+
+.figma-back {
+  position: absolute;
+  display: block;
+  z-index: 20;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.figma-back.app-back {
+  left: calc(var(--back-x) * var(--du));
+  top: calc(var(--back-y) * var(--du));
+  width: calc(var(--back-size) * var(--du));
+  height: calc(var(--back-size) * var(--du));
+  display: grid;
+  place-items: center;
+  color: var(--on-g-1);
+}
+
+.app-back .ic {
+  width: calc(var(--back-glyph) * var(--du));
+  height: calc(var(--back-glyph) * var(--du));
+}
+
+/* ------------------------------------------------------------
+   C3 · 章内三关
+   ------------------------------------------------------------ */
+
+.scr-c3 {
+  background: var(--g-light);
+}
+
+.c3-bg {
+  left: calc(var(--c3-bg-x) * var(--du));
+  top: calc(var(--c3-bg-y) * var(--du));
+  width: calc(var(--c3-bg-w) * var(--du));
+  height: calc(var(--c3-bg-h) * var(--du));
+  object-fit: fill;
+}
+
+.c3-ring {
+  top: calc(var(--c3-center-y) * var(--du));
+}
+
+.c3-ring--center {
+  left: calc(var(--c3-center-x) * var(--du));
+  width: calc(var(--c3-center-size) * var(--du));
+  height: calc(var(--c3-center-size) * var(--du));
+  z-index: 7;
+}
+
+.c3-ring--left {
+  left: calc(var(--c3-left-x) * var(--du));
+  top: calc(var(--c3-left-y) * var(--du));
+  width: calc(var(--c3-left-size) * var(--du));
+  height: calc(var(--c3-left-size) * var(--du));
+  z-index: 6;
+}
+
+.c3-ring--right {
+  left: calc(var(--c3-right-x) * var(--du));
+  top: calc(var(--c3-right-y) * var(--du));
+  width: calc(var(--c3-right-size) * var(--du));
+  height: calc(var(--c3-right-size) * var(--du));
+  z-index: 6;
+}
+
+.c3-ring--center .ring-bubble {
+  border-width: var(--glass-ring-c3-lg);
+}
+
+.c3-ring--left .ring-bubble,
+.c3-ring--right .ring-bubble {
+  border-width: var(--glass-ring-c3-sm);
+}
+
+.c3-ring[data-state="done"] .ring-bubble {
+  --ring-fill: var(--glass-fill-strong);
+  border-color: var(--glass-rim-strong);
+}
+
+.c3-ring[data-state="current"] .ring-bubble {
+  border-color: var(--glass-rim-strong);
+}
+
+.c3-ring[data-state="locked"] .ring-bubble {
+  border-color: var(--glass-rim-locked);
+  opacity: var(--ring-locked-opacity);
+}
+
+.c3-index {
+  font-size: var(--fs-c3-index-sm);
+  line-height: var(--lh-c3-index-sm);
+  letter-spacing: var(--tr-c3-index);
+  --ring-index-tracking: var(--tr-c2-index);
+}
+
+.c3-index--center {
+  --ring-index-dy: var(--c3-index-center-dy);
+  font-size: var(--fs-c3-index-lg);
+  line-height: var(--lh-c3-index-lg);
+}
+
+.c3-index--left {
+  --ring-index-dy: var(--c3-index-left-dy);
+}
+
+.c3-index--right {
+  --ring-index-dy: var(--c3-index-right-dy);
+}
+
+.c3-ring[data-state="locked"] .ring-index {
+  opacity: var(--ring-locked-opacity);
+}
+
+/* ------------------------------------------------------------
+   动效 · 通用关键帧
+   名字中性，供 C1 / P1 / C3 各屏复用
+   ------------------------------------------------------------ */
+
+@keyframes anim-cam {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(var(--anim-cam-scale)); }
+}
+
+/* 只驱动 opacity 的呼吸，提示文字用 */
+@keyframes anim-breathe {
+  0%, 8%    { opacity: 1; }
+  50%       { opacity: var(--anim-hint-dim); }
+  92%, 100% { opacity: 1; }
+}
+
+/* 入场淡入：只写 from，终态由元素自身的声明值决定，
+   这样动画结束后 hover 之类的规则才有机会生效 */
+@keyframes anim-fade-in {
+  from { opacity: 0; }
+}
+
+/* 文字入场：注意必须带上 translate(-50%, -50%)，
+   否则元素会从居中位置飞走 —— 这个元素的居中就是靠 transform 做的 */
+@keyframes anim-rise-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + var(--anim-title-rise) * var(--du)));
+    filter: blur(calc(var(--anim-title-blur) * var(--du)));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+    filter: blur(0);
+  }
+}
+
+@keyframes anim-whale-drift {
+  0%, 100% { transform: translateX(calc(-1 * var(--anim-whale-drift) * var(--du))); }
+  50%      { transform: translateX(calc(var(--anim-whale-drift) * var(--du))); }
+}
+
+@keyframes anim-sheen {
+  0%, 100% { transform: translateX(calc(-1 * var(--anim-sheen-shift) * 1%)); }
+  50%      { transform: translateX(calc(var(--anim-sheen-shift) * 1%)); }
+}
+
+@keyframes anim-exit {
+  to {
+    opacity: 0;
+    transform: scale(var(--anim-exit-scale));
+  }
+}
+
+/* ------------------------------------------------------------
+   P1 · 家长端概览
+   底图已按 16:9 铺满。内容排版未定，.p1-stub 仅用于开发期跳转。
+   ------------------------------------------------------------ */
+
+.scr-p1 {
+  background: var(--page-bg);
+}
+
+.p1-bg {
+  left: calc(var(--p1-bg-x) * var(--du));
+  top: calc(var(--p1-bg-y) * var(--du));
+  width: calc(var(--p1-bg-w) * var(--du));
+  height: calc(var(--p1-bg-h) * var(--du));
+  object-fit: fill;
+}
+
+/* 开发期占位跳转：不属于设计，正式排版确定后整块删除 */
+.p1-stub {
+  position: absolute;
+  left: calc(var(--p1-stub-x) * var(--du));
+  top: calc(var(--p1-stub-y) * var(--du));
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--p1-stub-note-gap) * var(--du));
+  margin: 0;
+  padding: 0;
+}
+
+.p1-stub__note {
+  margin: 0;
+  font-family: var(--font-figma-label);
+  font-size: var(--fs-label);
+  line-height: var(--lh-none);
+  color: var(--on-g-2);
+}
+
+.p1-stub__links {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--p1-stub-gap) * var(--du));
+}
+
+.p1-stub__link {
+  display: block;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-figma-label);
+  font-size: var(--fs-p1-stub);
+  line-height: var(--lh-none);
+  color: var(--on-g-2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.p1-stub__link:hover,
+.p1-stub__link:focus-visible {
+  color: var(--on-g-1);
+}
+
+.p1-stub__link:focus-visible {
+  outline: var(--lw-emph) solid var(--on-g-1);
+  outline-offset: var(--sp-2);
+}
+
+/* ------------------------------------------------------------
+   动效 · C2 专有关键帧
+   ------------------------------------------------------------ */
+
+/* 环与编号一起悬浮：动画挂在 .ring-float 上，编号在它内部，自动跟随 */
+@keyframes anim-ring-float {
+  0%, 100% { transform: translateY(calc(-1 * var(--ring-amp) * var(--du))); }
+  50%      { transform: translateY(calc(var(--ring-amp) * var(--du))); }
+}
+
+/* 环入场：挂在 .ring-slot（按钮）上，与环境循环分处两个元素，互不抢 transform */
+@keyframes anim-ring-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--anim-ring-rise) * var(--du)))
+      scale(var(--anim-ring-from));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes anim-title-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--anim-c2-title-slide) * var(--du)));
+    filter: blur(calc(var(--anim-title-blur) * var(--du)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes anim-whale-swim {
+  0%, 100% {
+    transform: translateY(calc(-1 * var(--c2-whale-amp) * var(--du)))
+      rotate(calc(-1 * var(--c2-whale-tilt) * 1deg));
+  }
+  50% {
+    transform: translateY(calc(var(--c2-whale-amp) * var(--du)))
+      rotate(calc(var(--c2-whale-tilt) * 1deg));
+  }
+}
+
+@keyframes anim-bubble-bump {
+  0%, 100% { transform: translateY(calc(-1 * var(--bub-amp) * var(--du))); }
+  50%      { transform: translateY(calc(var(--bub-amp) * var(--du))); }
+}
+
+@keyframes anim-arc-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: var(--c2-arc-min); }
+}
+
+@keyframes anim-veil-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: var(--c2-veil-min); }
+}
+
+/* 参数映射：沿用 --c2-index-one-dx → --ring-index-dx 的既有写法 */
+.scr-c2 .c2-ring--one .ring-float {
+  --ring-amp: var(--c2-float-one-amp);
+  --ring-dur: var(--c2-float-one-dur);
+  --ring-delay: var(--c2-float-one-delay);
+}
+
+.scr-c2 .c2-ring--two .ring-float {
+  --ring-amp: var(--c2-float-two-amp);
+  --ring-dur: var(--c2-float-two-dur);
+  --ring-delay: var(--c2-float-two-delay);
+}
+
+.scr-c2 .c2-ring--three .ring-float {
+  --ring-amp: var(--c2-float-three-amp);
+  --ring-dur: var(--c2-float-three-dur);
+  --ring-delay: var(--c2-float-three-delay);
+}
+
+.scr-c2 .c2-ring--extra .ring-float {
+  --ring-amp: var(--c2-float-extra-amp);
+  --ring-dur: var(--c2-float-extra-dur);
+  --ring-delay: var(--c2-float-extra-delay);
+}
+
+/* 必须限定在 .scr-c2 内：.ring-float 在 C3 也在用，
+   不加限定会让 C3 拿到一套未定义变量而静默失效 */
+.scr-c2 .ring-float {
+  animation: anim-ring-float var(--ring-dur, 8s) var(--anim-ease-breath)
+    var(--ring-delay, 0s) infinite;
+}
+
+.scr-c2 .c2-whale {
+  transform-origin: 50% 55%;
+  animation:
+    anim-fade-in var(--c2-whale-in-dur) linear backwards,
+    anim-whale-swim var(--c2-whale-dur) var(--anim-ease-breath) infinite;
+}
+
+.scr-c2 .c2-bubble {
+  animation: anim-bubble-bump var(--bub-dur, 8s) var(--anim-ease-breath)
+    var(--bub-delay, 0s) infinite;
+}
+
+.scr-c2 .c2-bubble--a {
+  --bub-amp: var(--c2-bump-a-amp);
+  --bub-dur: var(--c2-bump-a-dur);
+  --bub-delay: var(--c2-bump-a-delay);
+}
+
+.scr-c2 .c2-bubble--b {
+  --bub-amp: var(--c2-bump-b-amp);
+  --bub-dur: var(--c2-bump-b-dur);
+  --bub-delay: var(--c2-bump-b-delay);
+}
+
+.scr-c2 .c2-bubble--c {
+  --bub-amp: var(--c2-bump-c-amp);
+  --bub-dur: var(--c2-bump-c-dur);
+  --bub-delay: var(--c2-bump-c-delay);
+}
+
+.scr-c2 .c2-arc {
+  animation: anim-arc-breathe var(--c2-arc-dur) var(--anim-ease-breath) infinite;
+}
+
+/* 当前环：预览蒙层极缓呼吸，用亮度标记“现在是这个”，不加徽章不加描边 */
+.scr-c2 .ring-slot.is-current .ring-preview::after {
+  animation: anim-veil-breathe var(--c2-veil-dur) var(--anim-ease-breath) infinite;
+}
+
+/* 三个主环错峰浮起。延迟写在 .c2-ring--one/two/three 上 */
+.scr-c2 .ring-slot {
+  transition:
+    transform 220ms var(--anim-ease-soft),
+    opacity 220ms linear;
+  animation: anim-ring-in var(--anim-ring-in-dur) var(--anim-ease-soft)
+    var(--ring-in-delay, 0ms) backwards;
+}
+
+.scr-c2 .c2-ring--one { --ring-in-delay: 0ms; }
+.scr-c2 .c2-ring--two { --ring-in-delay: 120ms; }
+.scr-c2 .c2-ring--three { --ring-in-delay: 240ms; }
+
+.scr-c2 .ring-slot:hover {
+  transform: translateY(calc(-1 * var(--c2-ring-lift) * var(--du)));
+}
+
+.scr-c2 .ring-slot:active {
+  transform: translateY(calc(-1 * var(--c2-ring-lift) * var(--du)))
+    scale(var(--c2-ring-press));
+}
+
+/* 顺序要紧：hover 在前、is-current 在后。
+   已选环还要维持强填充，避免悬停反而把当前状态变暗。 */
+.scr-c2 .ring-slot:hover .ring-bubble {
+  --ring-fill: var(--glass-fill-hover);
+  --ring-rim: var(--c2-rim-hover);
+}
+
+.scr-c2 .ring-slot.is-current .ring-bubble {
+  --ring-fill: var(--glass-fill-strong);
+  --ring-rim: var(--glass-rim-strong);
+}
+
+.scr-c2 .c2-title {
+  animation: anim-title-in var(--anim-ring-in-dur) var(--anim-ease-soft)
+    var(--anim-c2-title-delay) backwards;
+}
+
+.scr-c2 .c2-side-title {
+  animation: anim-fade-in var(--anim-ring-in-dur) linear
+    var(--anim-c2-side-delay) backwards;
+}
+
+.scr-c2 .c2-tools,
+.scr-c2 .figma-back {
+  animation: anim-fade-in var(--anim-ring-in-dur) linear
+    var(--anim-c2-tools-delay) backwards;
+}
+
+/* 退场：被点中的环放大并留在最前，其余元素淡出，底图不动 */
+.scr-c2.is-leaving .c2-title,
+.scr-c2.is-leaving .c2-side-title,
+.scr-c2.is-leaving .c2-tools,
+.scr-c2.is-leaving .c2-arc,
+.scr-c2.is-leaving .c2-bubble,
+.scr-c2.is-leaving .c2-whale,
+.scr-c2.is-leaving .figma-back,
+.scr-c2.is-leaving .ring-slot {
+  opacity: 0;
+  transition: opacity var(--anim-dive-fade) linear;
+  animation: none;
+}
+
+.scr-c2.is-leaving .ring-slot.is-dived {
+  opacity: 1;
+  z-index: 30;
+  transform: scale(var(--anim-dive-scale));
+  transition: transform var(--anim-dive-dur) var(--anim-ease-soft);
+  animation: none;
+}
+
+/* ------------------------------------------------------------
+   动效 · C3（章内三关）
+   ------------------------------------------------------------ */
+
+/* 参数映射：设计值留在 tokens.css，这里只做挂接 */
+.scr-c3 .c3-ring--center .ring-float {
+  --ring-amp: var(--c3-float-center-amp);
+  --ring-dur: var(--c3-float-center-dur);
+  --ring-delay: var(--c3-float-center-delay);
+}
+
+.scr-c3 .c3-ring--left .ring-float {
+  --ring-amp: var(--c3-float-left-amp);
+  --ring-dur: var(--c3-float-left-dur);
+  --ring-delay: var(--c3-float-left-delay);
+}
+
+.scr-c3 .c3-ring--right .ring-float {
+  --ring-amp: var(--c3-float-right-amp);
+  --ring-dur: var(--c3-float-right-dur);
+  --ring-delay: var(--c3-float-right-delay);
+}
+
+/* 环与编号一起浮：动画挂在 .ring-float 上，编号在它内部自动跟随 */
+.scr-c3 .ring-float {
+  animation: anim-ring-float var(--ring-dur, 8s) var(--anim-ease-breath)
+    var(--ring-delay, 0s) infinite;
+}
+
+/* 入场：挂在按钮上，和浮动分处两个元素 */
+.scr-c3 .ring-slot {
+  transition:
+    transform 220ms var(--anim-ease-soft),
+    opacity var(--c3-focus-dur) linear;
+  animation: anim-ring-in var(--anim-ring-in-dur) var(--anim-ease-soft)
+    var(--ring-in-delay, 0ms) backwards;
+}
+
+.scr-c3 .c3-ring--center { --ring-in-delay: var(--c3-in-center-delay); }
+.scr-c3 .c3-ring--left   { --ring-in-delay: var(--c3-in-left-delay); }
+.scr-c3 .c3-ring--right  { --ring-in-delay: var(--c3-in-right-delay); }
+
+.scr-c3 .ring-slot:not(:disabled):hover {
+  transform: translateY(calc(-1 * var(--c3-ring-lift) * var(--du)));
+}
+
+.scr-c3 .ring-slot:not(:disabled):active {
+  transform: translateY(calc(-1 * var(--c3-ring-lift) * var(--du)))
+    scale(var(--c3-ring-press));
+}
+
+.scr-c3 .ring-slot:not(:disabled):hover .ring-bubble {
+  border-color: var(--c3-rim-hover);
+}
+
+/* 退场：不换页，只做焦点转移。被点环放大留在最前，另外两环压暗，返回键淡出 */
+.scr-c3.is-leaving .ring-slot:not(.is-focus) {
+  opacity: var(--c3-focus-dim);
+  animation: none;
+}
+
+.scr-c3.is-leaving .figma-back {
+  opacity: 0;
+  transition: opacity var(--c3-focus-dur) linear;
+}
+
+.scr-c3.is-leaving .ring-slot.is-focus {
+  z-index: 30;
+  transform: scale(var(--c3-focus-scale));
+  transition: transform var(--c3-focus-dur) var(--anim-ease-soft);
+  animation: none;
+}
+
+/* 复用 anim-ring-in：它不以 translate(-50%,-50%) 为基准，可以安全套在
+   用 grid place-items 居中的卡片上（anim-rise-in 就不行，它内部带着
+   translate(-50%,-50%)，套上去卡片会飞走） */
+.overlay-card {
+  --anim-ring-rise: var(--anim-card-rise);
+  --anim-ring-from: var(--anim-card-from);
+  animation: anim-ring-in var(--anim-card-dur) var(--anim-ease-soft)
+    var(--anim-card-delay) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --anim-exit-dur: 1ms;
+    --anim-dive-dur: 1ms;
+    --c2-title-swap-out: 0ms;
+    --c2-title-swap-in: 0ms;
+    --c3-focus-dur: 1ms;
+    --anim-card-dur: 1ms;
+    --anim-card-delay: 0ms;
+  }
+
+  .c1-cam,
+  .c1-whale,
+  .c1-sheen,
+  .c1-title,
+  .c1-hint,
+  .c1-switch,
+  .scr-c1.is-leaving {
+    animation: none;
+    transition: none;
+  }
+
+  .c1-title,
+  .c1-hint {
+    opacity: 1;
+    filter: none;
+  }
+
+  .c1-switch {
+    opacity: var(--anim-switch-idle);
+  }
+
+  .scr-c2 .ring-float,
+  .scr-c2 .ring-slot,
+  .scr-c2 .c2-whale,
+  .scr-c2 .c2-bubble,
+  .scr-c2 .c2-arc,
+  .scr-c2 .c2-title,
+  .scr-c2 .c2-side-title,
+  .scr-c2 .c2-tools,
+  .scr-c2 .figma-back,
+  .scr-c2 .ring-slot.is-current .ring-preview::after,
+  .scr-c2.is-leaving .ring-slot {
+    animation: none;
+    transition: none;
+  }
+
+  .scr-c3 .ring-float,
+  .scr-c3 .ring-slot,
+  .scr-c3.is-leaving .ring-slot,
+  .scr-c3.is-leaving .overlay-card,
+  .overlay-card {
+    animation: none;
+    transition: none;
+  }
+}
+

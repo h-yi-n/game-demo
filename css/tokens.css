@@ -1,0 +1,524 @@
+/* ============================================================
+   tokens.css —— 设计变量表
+   对应文档：docs/15_design_tokens.md
+
+   状态标记：
+     [源]   值直接取自参考图上印刷的色值 / 可量取的客观特征
+     [候选] 我提的值，等你确认；确认前一律视为可变参数
+     [未定] 还不能填，文档里写的是「未定」
+
+   铁律：solid hex 只允许出现在本文件。
+   其他地方只能用 var()。
+   ============================================================ */
+
+:root {
+  /* ---------- 画布 ---------- */
+  --stage-w: 1440;                        /* [候选] 设计基准宽度 */
+  --stage-ratio: 1.6;                     /* [候选] 16 : 10 */
+  /* 根级值供派生 token 在计算阶段解析；与 .screen-root 的 100cqw 等值。 */
+  --du: calc(
+    min(100vw, calc(100vh * var(--stage-ratio))) / var(--stage-w)
+  );
+
+  /* ---------- 色 · 画面外 ---------- */
+  --page-bg: #0c0f32;                     /* [源] 参考图 06 深端点 */
+
+  /* ---------- 色 · 未做视觉的页面（灰阶占位，最终会删） ---------- */
+  --legacy-bg: #ffffff;
+  --legacy-box: #e5e5e5;
+  --legacy-text: #333333;
+  --legacy-border: #999999;
+
+  /* ---------- 色 · 结构层（所有页面共用，不随氛围变） ---------- */
+  /* 只用一个实色 ink + 两个透明度，避免我自创第二个灰 */
+  --ink-solid: #141d2e;                   /* [源] 参考图 07 深端点 */
+  --ink-1: var(--ink-solid);              /* 卡片面上的主文字 */
+  --ink-2: rgba(20, 29, 46, 0.62);        /* 次文字 */
+  --ink-3: rgba(20, 29, 46, 0.40);        /* 弱文字 / 分隔说明 */
+
+  /* ---------- 色 · 面 ---------- */
+  --surface-1: rgba(255, 255, 255, 0.90); /* [候选] 可用 / 已完成关卡的面 */
+  --surface-2: rgba(255, 255, 255, 0.62); /* [候选] 次级面（暂未用） */
+  --surface-locked: rgba(20, 29, 46, 0.05); /* [候选] 未解锁的面：浅底上可见的"空位" */
+
+  /* ---------- 色 · 线 ---------- */
+  --line-1: rgba(255, 255, 255, 0.34);    /* 压在渐变上的发丝线 */
+  --line-2: rgba(255, 255, 255, 0.62);    /* 需要强调的发丝线 */
+  --line-ink: rgba(20, 29, 46, 0.14);     /* 卡片面上的分隔线 */
+  --line-locked: rgba(20, 29, 46, 0.22);  /* 未解锁：空位的虚线边 */
+
+  /* ---------- 色 · 压在渐变上的文字 ---------- */
+  --on-g-1: rgba(255, 255, 255, 1);
+  --on-g-2: rgba(255, 255, 255, 0.74);
+  --on-g-3: rgba(255, 255, 255, 0.46);
+  --glow: rgba(255, 255, 255, 0.60);      /* 光晕 */
+  --glow-mid: rgba(255, 255, 255, 0.22);  /* 光晕的过渡圈 */
+  --g-fade: rgba(255, 255, 255, 0);       /* 渐变收边用的全透明（与白同色相，不会出现灰边） */
+
+  /* ---------- 色 · 氛围层 ----------
+     每条预设三色，全部是参考图印刷值，我没有调过。
+     --accent 不新增色值：直接取该套的深端点，
+     保证「同一页里只有这一套颜色」。 */
+  --g-deep: #0453af;
+  --g-mid: #ffc8ae;
+  --g-light: #ffe4c4;
+  /* 底边：由本套的浅端与中间色混出，不新增色值 */
+  --g-foot: color-mix(in oklab, var(--g-light) 46%, var(--g-mid) 54%);
+  --accent: var(--g-deep);
+}
+
+/* 氛围预设：每条对应一张参考图，注释里写明出处 */
+[data-atmo="reef"] {
+  /* [源] 参考图 01 · 奶油 → 蜜桃 → 深蓝 */
+  --g-deep: #0453af;
+  --g-mid: #ffc8ae;
+  --g-light: #ffe4c4;
+  --g-foot: color-mix(in oklab, var(--g-light) 46%, var(--g-mid) 54%);
+}
+[data-atmo="bay"] {
+  /* [源] 参考图 02 · 粉 → 蓝灰 → 深紫 */
+  --g-deep: #262277;
+  --g-mid: #678ec9;
+  --g-light: #ffc8e0;
+  --g-foot: color-mix(in oklab, var(--g-light) 46%, var(--g-mid) 54%);
+}
+[data-atmo="abyss"] {
+  /* [源] 参考图 06 · 冰蓝 → 电蓝 → 近黑 */
+  --g-deep: #0c0f32;
+  --g-mid: #0557de;
+  --g-light: #d2e8ff;
+  --g-foot: color-mix(in oklab, var(--g-light) 46%, var(--g-mid) 54%);
+}
+
+/* color-mix 不可用时退回浅端，渐变仍成立 */
+@supports not (color: color-mix(in oklab, white, black)) {
+  :root,
+  [data-atmo] {
+    --g-foot: var(--g-light);
+  }
+}
+
+/* ---------- 字 ---------- */
+/* 零依赖：只能用系统字体。Windows 中文只有 400/700，
+   所以层级靠字号 + 字距承担，不靠 300。 */
+:root {
+  --font-sans: "PingFang SC", "HarmonyOS Sans SC", "MiSans",
+    "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-num: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+  --fw-reg: 400;                          /* [源] 系统可用档位 */
+  --fw-med: 500;                          /* [源] macOS 生效，Windows 回落 400 */
+  --fw-bold: 700;                         /* [源] */
+
+  --fs-display: calc(76 * var(--du));     /* [候选] 章名 / 开屏主标 */
+  --fs-h1: calc(44 * var(--du));          /* [候选] 页标题 */
+  --fs-h2: calc(30 * var(--du));          /* [候选] 卡片标题 */
+  --fs-lg: calc(20 * var(--du));          /* [候选] 强调正文 */
+  --fs-body: calc(16 * var(--du));        /* [候选] 正文 */
+  --fs-sm: calc(14 * var(--du));          /* [候选] 辅助 */
+  --fs-label: calc(12 * var(--du));       /* [候选] 标签（配宽字距） */
+  --fs-num-xl: calc(92 * var(--du));      /* [候选] 卡片大数字 */
+
+  --lh-tight: 1.08;
+  --lh-normal: 1.5;
+  --lh-loose: 1.7;
+
+  --tr-label: 0.18em;                     /* [候选] 宽字距标签 */
+  --tr-label-wide: 0.28em;                /* [候选] 眉标 */
+  --tr-title: -0.01em;                    /* [候选] 大标题轻微收紧 */
+}
+
+/* ---------- 间距 ---------- */
+:root {
+  --sp-1: calc(4 * var(--du));
+  --sp-2: calc(8 * var(--du));
+  --sp-3: calc(12 * var(--du));
+  --sp-4: calc(16 * var(--du));
+  --sp-5: calc(24 * var(--du));
+  --sp-6: calc(32 * var(--du));
+  --sp-7: calc(48 * var(--du));
+  --sp-8: calc(72 * var(--du));
+  --sp-9: calc(96 * var(--du));
+
+  --pad-screen-x: calc(76 * var(--du));
+  --pad-screen-t: calc(52 * var(--du));
+  --pad-screen-b: calc(60 * var(--du));
+}
+
+/* ---------- 圆角 ---------- */
+/* 参考图 11-14 的块圆角约占块高的 12-16%，据此定为 3 档 */
+:root {
+  --r-sm: calc(10 * var(--du));           /* [候选] 小控件 / 标签 */
+  --r-md: calc(18 * var(--du));           /* [候选] 次级容器 */
+  --r-lg: calc(28 * var(--du));           /* [候选] 大色块 / 主卡片 */
+  --r-full: 999px;
+
+  --icon-stroke: calc(2.8 * var(--du));
+}
+
+/* ---------- 线宽 ---------- */
+:root {
+  --lw-hair: calc(1 * var(--du));         /* [源] 发丝线 */
+  --lw-emph: calc(2 * var(--du));         /* [候选] 需要强调时 */
+}
+
+/* ---------- 动效 ---------- */
+:root {
+  --dur-fast: 160ms;
+  --dur-base: 260ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ---------- 颗粒 ---------- */
+/* 10 张色彩参考图全部带细颗粒，无一例外，所以保留为可选层 */
+:root {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-opacity: 0.14;                  /* [候选] */
+}
+
+/* ============================================================
+   Figma「game ui」C1–C3
+   以下几何值由设计文件节点直接量取；[源]
+   字体使用 Figma 字体名优先，缺失时按系统字体回退。
+   玻璃气泡为本轮负责人新增方向，所有效果值集中在此处。
+   ============================================================ */
+:root {
+  /* 字体：GG-* 是项目自带的设计稿字体子集（assets/fonts/ + css/fonts.css）。
+     后面跟同名字体的，是本机装了正版同款时的回退；最后落系统字体。
+     子集里没有的字会沿这个列表继续往后找，不会出现豆腐块。
+     新增文案后若发现某个字字形跳了，重跑 python tools/build_fonts.py 即可。 */
+  --font-figma-display: "GG-DingDing", "造字工房叮叮", var(--font-sans);
+  --font-figma-title: "GG-YueHei", "造字工房悦黑", "造字公房悦黑",
+    "汉仪旗黑", var(--font-sans);
+  --font-figma-number: "GG-LangQian", "造字工房朗倩", var(--font-num);
+  --font-figma-label: "GG-QiHei", "汉仪旗黑", var(--font-sans);
+  --font-figma-latin: "GG-ABeeZee", "ABeeZee", var(--font-num);
+
+  /* 玻璃气泡：透光、模糊、边缘高光、内阴影 */
+  --glass-fill: rgba(255, 255, 255, 0.12);       /* [本轮新增] */
+  --glass-fill-strong: rgba(255, 255, 255, 0.18);/* [本轮新增] */
+  --glass-rim: rgba(255, 255, 255, 0.58);        /* [本轮新增] */
+  --glass-rim-strong: rgba(255, 255, 255, 0.76); /* [本轮新增] */
+  --glass-rim-locked: rgba(255, 255, 255, 0.22); /* [本轮新增] */
+  --glass-highlight: rgba(255, 255, 255, 0.46);  /* [本轮新增] */
+  --glass-shadow: rgba(20, 29, 46, 0.28);        /* [本轮新增] */
+  --glass-preview-veil: rgba(255, 255, 255, 0.30);/* [本轮新增] */
+  --glass-preview-veil-current: rgba(255, 255, 255, 0.20);/* [本轮新增] */
+  --glass-blur: calc(8 * var(--du));             /* [本轮新增] */
+  --glass-saturate: 118%;                         /* [本轮新增] */
+  --glass-contrast: 108%;                         /* [本轮新增] */
+  --glass-inner-shadow: calc(34 * var(--du));    /* [本轮新增] */
+  --glass-outer-glow: calc(42 * var(--du));      /* [本轮新增] */
+  --glass-ring-main: calc(28 * var(--du));       /* [源] C2 主环描边 */
+  --glass-ring-c3-lg: calc(14 * var(--du));      /* [源] C3 中央环描边 */
+  --glass-ring-c3-sm: calc(9 * var(--du));       /* [源] C3 两侧环描边 */
+  --ring-locked-opacity: 0.65;                    /* [本轮新增] */
+  --ring-index-ink: rgba(255, 255, 255, 0.72);    /* [确认] */
+  --ring-inset-blur: calc(8 * var(--du));          /* [本轮新增] */
+  --ring-inset-spread: calc(-20 * var(--du));      /* [本轮新增] */
+  --c2-arc-a: 0.13;                               /* [候选] 外层柔光 */
+  --c2-arc-b: 0.20;                               /* [候选] 中层过渡 */
+  --c2-arc-c: 0.34;                               /* [候选] 内层中心 */
+  --lh-none: 1;                                   /* [结构] 单行控件基线 */
+  --back-x: 47;                                   /* [确认] 左下统一返回键 */
+  --back-y: 793;                                  /* [确认] 按设计稿反算 */
+  --back-size: 70;                                /* [确认] */
+  --back-glyph: 33;                               /* [确认] */
+
+  /* 单行文字 = max-content + center + text-indent: ls/2。
+     letter-spacing 会在末字后保留一份字距，因此只补半个字距；
+     盒子宽度跟随文字，不再用固定宽度裁切。 */
+
+  /* C1 · 开屏 */
+  --c1-bg-x: -208;                  /* [源] */
+  --c1-bg-y: 0;                     /* [源] */
+  --c1-bg-w: 1856;                  /* [源] */
+  --c1-bg-h: 1044;                  /* [源] */
+  --c1-switch-x: 40;                /* [源] */
+  --c1-switch-y: 15;                /* [源] */
+  --c1-switch-icon: 60;             /* [源] */
+  --c1-switch-glyph: 44;            /* [确认] */
+  --c1-switch-icon-dy: 7.5;         /* [确认] */
+  --c1-switch-label-cx: 147;        /* [源] x + w / 2 */
+  --c1-switch-label-cy: 47;         /* [源] y + h / 2 */
+  --c1-switch-label-w: 174;         /* [源] */
+  --c1-switch-label-h: 44;          /* [源] */
+  --c1-title-cx: 720;               /* [确认] 标题墨迹中心 */
+  --c1-title-cy: 253;               /* [源] 168 + 170 / 2 */
+  --c1-title-w: 1010;               /* [源] */
+  --c1-title-h: 170;                /* [源] */
+  --c1-hint-cx: 729.5;              /* [源] x + w / 2 */
+  --c1-hint-cy: 483.5;              /* [源] y + h / 2 */
+  --c1-hint-w: 715;                 /* [源] */
+  --c1-hint-h: 39;                  /* [源] */
+  --fs-c1-switch: calc(24 * var(--du));   /* [源] */
+  --fs-c1-title: calc(220 * var(--du));   /* [源] */
+  --fs-c1-hint: calc(32 * var(--du));     /* [源] */
+  --lh-c1-title: 0.77;                    /* [保留] 既有排版参数 */
+  --lh-c1-hint: 1.22;                     /* [源] */
+  --tr-c1-title: 0.60em;                  /* [源] */
+  --tr-c1-hint: 1.75em;                   /* [源] */
+
+  /* C2 · 主界面 */
+  --c2-bg-x: -160;                  /* [源] */
+  --c2-bg-y: 0;                     /* [源] */
+  --c2-bg-w: 1600;                  /* [源] */
+  --c2-bg-h: 900;                   /* [源] */
+  --c2-title-x: 95;                 /* [源] */
+  --c2-title-y: 100;                /* [源] */
+  --c2-title-w: 616;                /* [源] */
+  --c2-title-h: 220;                /* [源] */
+  --c2-meta-cx: 49.5;               /* [源] x + w / 2 */
+  --c2-meta-cy: 19.5;               /* [源] y + h / 2 */
+  --c2-meta-w: 85;                  /* [源] */
+  --c2-meta-h: 39;                  /* [源] */
+  --c2-level-cx: 164.5;             /* [源] x + w / 2 */
+  --c2-level-cy: 19;                /* [源] y + h / 2 */
+  --c2-level-w: 87;                 /* [源] */
+  --c2-level-h: 38;                 /* [源] */
+  --c2-rule-v-x: 107;               /* [源] */
+  --c2-rule-v-y: 2;                 /* [源] */
+  --c2-rule-v-h: 32;                /* [源] */
+  --c2-rule-h-x: 7;                 /* [源] */
+  --c2-rule-h-y: 51;                /* [源] */
+  --c2-rule-h-w: 198;               /* [源] */
+  --c2-hero-cx: 104;                /* [源] x + w / 2 */
+  --c2-hero-cy: 133;                /* [源] y + h / 2 */
+  --c2-hero-w: 198;                 /* [源] */
+  --c2-hero-h: 174;                 /* [源] */
+  --c2-hero-sx-one: 1.1;             /* [确认] */
+  --c2-hero-sx-two: 0.894;           /* [确认] */
+  --c2-hero-sx-three: 0.909;         /* [确认] */
+  --c2-hero-tr-one: 0;               /* [确认] */
+  --c2-hero-tr-two: 0.3;             /* [确认] */
+  --c2-hero-tr-three: 5.8;           /* [确认] */
+  --c2-hero-dx-one: -1;              /* [确认] */
+  --c2-hero-dx-two: 1;               /* [确认] */
+  --c2-hero-dx-three: 2.5;           /* [确认] */
+  --c2-name-cx: 420;                 /* [源] x + w / 2 */
+  --c2-name-dx-one: 0.7;             /* [确认] */
+  --c2-name-dx-two: 1.6;             /* [确认] */
+  --c2-name-dx-three: 0.9;           /* [确认] */
+  --c2-name-cy: 151.5;              /* [源] y + h / 2 */
+  --c2-name-w: 408;                 /* [源] */
+  --c2-name-h: 97;                  /* [源] */
+  --c2-whale-x: 28;                 /* [源] */
+  --c2-whale-y: 164;                /* [源] */
+  --c2-whale-w: 736;                /* [源] */
+  --c2-whale-h: 736;                /* [源] */
+  --c2-side-title-cx: 1300;         /* [源] x + w / 2 */
+  --c2-side-title-cy: 106;          /* [源] y + h / 2 */
+  --c2-side-title-w: 200;           /* [源] */
+  --c2-side-title-h: 194;           /* [源] */
+  --c2-ring-one-x: 916;             /* [源] */
+  --c2-ring-one-y: 164;             /* [源] */
+  --c2-ring-two-x: 720;             /* [源] */
+  --c2-ring-two-y: 352;             /* [源] */
+  --c2-ring-three-x: 980;           /* [源] */
+  --c2-ring-three-y: 424;           /* [源] */
+  --c2-ring-size: 296;              /* [源] */
+  --c2-ring-extra-x: 840;           /* [源] */
+  --c2-ring-extra-y: 648;           /* [源] */
+  --c2-ring-extra-size: 176;        /* [源] */
+  --c2-index-one-dx: -150.845;      /* [推导] 按实测编号盒宽外退，净空 20du */
+  --c2-index-one-dy: -167.376;      /* [推导] */
+  --c2-index-two-dx: -183.654;      /* [推导] */
+  --c2-index-two-dy: 147.138;       /* [推导] */
+  --c2-index-three-dx: 147.258;     /* [推导] */
+  --c2-index-three-dy: 175.657;     /* [推导] */
+  --c2-preview-size: 208;           /* [源] */
+  --c2-arc-x: 1128;                 /* [源] */
+  --c2-arc-y: -30;                  /* [源] */
+  --c2-arc-w: 218;                  /* [源] */
+  --c2-arc-h: 316;                  /* [源] */
+  --c2-arc-stroke: calc(25 * var(--du));    /* [源] */
+  --c2-rule-h-stroke: calc(5 * var(--du));  /* [源] */
+  --c2-bubble-a-x: 980;             /* [源] */
+  --c2-bubble-a-y: 782;             /* [源] */
+  --c2-bubble-a-size: 64;           /* [源] */
+  --c2-bubble-b-x: 1300;            /* [源] */
+  --c2-bubble-b-y: 352;             /* [源] */
+  --c2-bubble-b-size: 64;           /* [源] */
+  --c2-bubble-c-x: 1276;            /* [源] */
+  --c2-bubble-c-y: 352;             /* [源] */
+  --c2-bubble-c-size: 32;           /* [源] */
+  --c2-tool-x: 128;                 /* [确认] */
+  --c2-tool-y: 801;                 /* [确认] */
+  --c2-tool-size: 54;               /* [确认] */
+  --c2-tool-gap: 14;                /* [确认] */
+  --c2-tool-icon: 46;               /* [确认] */
+  --c2-mini-x: 1084;                /* [本轮新增] */
+  --c2-mini-y: 790;                 /* [本轮新增] */
+  --c2-mini-size: 48;               /* [本轮新增] */
+  --c2-mini-gap: 12;                /* [本轮新增] */
+  --c2-complete-cx: 1270;           /* [本轮新增] x + w / 2 */
+  --c2-complete-cy: 242;            /* [本轮新增] y + h / 2 */
+  --c2-complete-w: 220;             /* [本轮新增] */
+  --c2-complete-h: 44;              /* [本轮新增] */
+  --fs-c2-meta: calc(32 * var(--du));       /* [源] */
+  --fs-c2-level: calc(32 * var(--du));      /* [源] */
+  --fs-c2-hero: calc(140 * var(--du));      /* [源] */
+  --fs-c2-title: calc(96 * var(--du));      /* [源] */
+  --fs-c2-index: calc(64 * var(--du));      /* [源] */
+  --lh-c2-index: 1;                 /* [推导] 原先未定义，盒子高度随字体回落 */
+  --lh-c2-meta: 1.20;                       /* [源] */
+  --lh-c2-hero: 1.24;                       /* [源] */
+  --lh-c2-title: 1.01;                      /* [源] */
+  --tr-c2-meta: 0.64em;                     /* [源] */
+  --tr-c2-level: 0.11em;                    /* [源] */
+  --tr-c2-title: 0.08em;                    /* [源] */
+  --tr-c2-index: 0.08em;                    /* [源] */
+
+  /* C3 · 章内三关 */
+  --c3-bg-x: -160;                  /* [源] */
+  --c3-bg-y: 0;                     /* [源] */
+  --c3-bg-w: 1600;                  /* [源] */
+  --c3-bg-h: 900;                   /* [源] */
+  --c3-center-x: 480;               /* [源] */
+  --c3-center-y: 120;               /* [源] */
+  --c3-center-size: 480;            /* [源] */
+  --c3-left-x: 126;                 /* [源] */
+  --c3-left-y: 380;                 /* [源] */
+  --c3-left-size: 314;              /* [源] */
+  --c3-right-x: 1000;               /* [源] */
+  --c3-right-y: 380;                /* [源] */
+  --c3-right-size: 314;             /* [源] */
+  --c3-index-center-dy: 340;        /* [源] 编号中心相对环心 */
+  --c3-index-left-dy: 203.5;        /* [源] 编号中心相对环心 */
+  --c3-index-right-dy: 203.5;       /* [源] 编号中心相对环心 */
+  --fs-c3-index-lg: calc(128 * var(--du));  /* [源] */
+  --fs-c3-index-sm: calc(64 * var(--du));   /* [源] */
+  --lh-c3-index-lg: 1.01;                    /* [源] */
+  --lh-c3-index-sm: 1.01;                    /* [源] */
+  --tr-c3-index: 0.08em;                     /* [源] */
+
+  /* P1 · 家长端概览
+     底图 / 铺法已定；内容排版未定，stub 仅用于开发期跳转，不是设计值 */
+  --p1-bg-x: -80;                   /* [源] (1440 - 1600) / 2，16:9 无变形铺满 */
+  --p1-bg-y: 0;                     /* [源] */
+  --p1-bg-w: 1600;                  /* [源] */
+  --p1-bg-h: 900;                   /* [源] */
+  --p1-stub-x: 95;                  /* [占位] 沿用 C2 标题左沿 */
+  --p1-stub-y: 170;                 /* [占位] 落在天空最暗处，保证白色文字可读 */
+  --p1-stub-note-gap: 22;           /* [占位] 说明行与链接组之间 */
+  --p1-stub-gap: 56;                /* [占位] 两个占位链接之间 */
+  --fs-p1-stub: calc(28 * var(--du));  /* [占位] */
+
+  /* ---------- 动效 · 全局 ----------
+     C1 与 P1 共用；C3-1 与 C3-2/3 共用。keyframe 名字一律中性，
+     不要出现 c1 / c2 / p1 前缀。 */
+  --anim-ease-soft: cubic-bezier(0.22, 1, 0.36, 1);   /* [候选] 出台：快起慢收 */
+  --anim-ease-breath: cubic-bezier(0.45, 0, 0.55, 1); /* [候选] 呼吸：对称 */
+  --anim-cam-dur: 18s;              /* [候选] 镜头推拉周期 */
+  --anim-cam-scale: 1.03;           /* [候选] 只许 ≥ 1，缩小时会露出 --g-deep 底色 */
+  --anim-title-delay: 120ms;        /* [候选] */
+  --anim-title-dur: 1400ms;         /* [候选] */
+  --anim-title-rise: 26;            /* [候选] du，入场上浮距离 */
+  --anim-title-blur: 10;            /* [候选] du，入场起手模糊 */
+  --anim-hint-delay: 1200ms;        /* [候选] 等标题基本落定 */
+  --anim-hint-dur: 4s;              /* [候选] = 平静呼吸 15 次/分 */
+  --anim-hint-dim: 0.55;            /* [候选] 最暗时的不透明度，低于 0.5 就不易读了 */
+  --anim-switch-delay: 900ms;       /* [候选] */
+  --anim-switch-dur: 800ms;         /* [候选] */
+  --anim-switch-idle: 0.72;         /* [候选] 静止不透明度 */
+  --anim-exit-dur: 900ms;           /* [候选] 退场时长；JS 直接读这个值当定时器 */
+  --anim-exit-scale: 1.02;          /* [候选] 退场时继续微推近 */
+
+  /* C1 · 动效图层 */
+  --c1-cam-origin-x: 50%;           /* [候选] 镜头变换原点 */
+  --c1-cam-origin-y: 62%;           /* [候选] 海的消失点附近 */
+  --c1-whale-x: 936.84;             /* [源] 由 assets/开屏鲸鱼.png 反算，勿改 */
+  --c1-whale-y: 636.02;             /* [源] 勿改 */
+  --c1-whale-w: 295.93;             /* [源] 勿改 */
+  --c1-whale-h: 193.77;             /* [源] 勿改 */
+  --anim-whale-dur: 9s;             /* [候选] */
+  --anim-whale-drift: 6;            /* [候选] 水平 ±6du。见第 5 节，方向不许改 */
+  --c1-sheen-x: -180;               /* [候选] 左右各留 -180/w-180 的溢出，免得漂移露边 */
+  --c1-sheen-y: 760;                /* [候选] 水天线在 y≈750，从 760 起 */
+  --c1-sheen-w: 1800;               /* [候选] */
+  --c1-sheen-h: 140;                /* [候选] */
+  --c1-sheen-a: rgba(255, 255, 255, 0.22); /* [候选] 光带芯部 */
+  --c1-sheen-b: rgba(255, 255, 255, 0.08); /* [候选] 光带尾部 */
+  --anim-sheen-dur: 14s;            /* [候选] */
+  --anim-sheen-shift: 12;           /* [候选] % */
+
+  /* ---------- C2 · 动效 ----------
+     三个环的周期取互质数（7.3 / 8.6 / 9.7），避免同步齐步走。
+     相位用负 delay，开场即错开。 */
+  --anim-ring-in-dur: 900ms;        /* [候选] 环入场时长 */
+  --anim-ring-rise: 24;             /* [候选] du，入场上浮距离 */
+  --anim-ring-from: 0.92;           /* [候选] 入场起始缩放 */
+  --c2-ring-lift: 5;                /* [候选] du，hover 上抬量 */
+  --c2-ring-press: 0.97;            /* [候选] active 缩放 */
+
+  --c2-float-one-amp: 6;            /* [候选] du */
+  --c2-float-one-dur: 7.3s;         /* [候选] */
+  --c2-float-one-delay: 0s;         /* [候选] */
+  --c2-float-two-amp: 5;            /* [候选] */
+  --c2-float-two-dur: 8.6s;         /* [候选] */
+  --c2-float-two-delay: -2.2s;      /* [候选] 负 delay = 相位提前 */
+  --c2-float-three-amp: 4;          /* [候选] 三个环里最小，它与 01 重叠最多 */
+  --c2-float-three-dur: 9.7s;       /* [候选] */
+  --c2-float-three-delay: -4.5s;    /* [候选] */
+  --c2-float-extra-amp: 5;          /* [候选] 装饰环 */
+  --c2-float-extra-dur: 8.4s;       /* [候选] */
+  --c2-float-extra-delay: -3s;      /* [候选] */
+
+  --c2-whale-dur: 12s;              /* [候选] 鲸鱼游弋周期 */
+  --c2-whale-amp: 10;               /* [候选] du，上下幅度 */
+  --c2-whale-tilt: 1.2;             /* [候选] deg，左右倾摆 */
+  --c2-whale-in-dur: 1200ms;        /* [候选] 入场淡入 */
+
+  --c2-bump-a-amp: 8;               /* [候选] 小气泡 a */
+  --c2-bump-a-dur: 6.8s;            /* [候选] */
+  --c2-bump-a-delay: 0s;            /* [候选] */
+  --c2-bump-b-amp: 6;               /* [候选] 小气泡 b */
+  --c2-bump-b-dur: 9.2s;            /* [候选] */
+  --c2-bump-b-delay: -3s;           /* [候选] 与 c 错相，看起来才像互相轻碰 */
+  --c2-bump-c-amp: 5;               /* [候选] 小气泡 c */
+  --c2-bump-c-dur: 7.9s;            /* [候选] */
+  --c2-bump-c-delay: -1.5s;         /* [候选] */
+
+  --c2-arc-dur: 8s;                 /* [候选] 弧形环呼吸周期 */
+  --c2-arc-min: 0.85;               /* [候选] 最暗不透明度 */
+  --c2-veil-dur: 6s;                /* [候选] 当前环预览蒙层呼吸 */
+  --c2-veil-min: 0.55;              /* [候选] */
+
+  --anim-dive-dur: 700ms;           /* [候选] 潜入所选环；JS 直接读这个值当定时器 */
+  --anim-dive-scale: 1.22;          /* [候选] 被点中的环放大到 */
+  --anim-dive-fade: 500ms;          /* [候选] 其余元素淡出 */
+
+  --anim-c2-title-slide: 18;        /* [候选] du，标题组入场左移距离 */
+  --anim-c2-title-delay: 200ms;     /* [候选] */
+  --anim-c2-side-delay: 400ms;      /* [候选] */
+  --anim-c2-tools-delay: 500ms;     /* [候选] */
+  --glass-fill-hover: rgba(255, 255, 255, 0.15); /* [候选] 介于 fill 0.12 与 strong 0.18 之间 */
+  --c2-rim-hover: rgba(255, 255, 255, 0.67);     /* [候选] 介于 rim 0.58 与 strong 0.76 之间 */
+  --c2-title-swap-out: 60ms;        /* [候选] 标题切选：淡出 */
+  --c2-title-swap-in: 80ms;         /* [候选] 标题切选：淡入，合计 140ms */
+
+  /* ---- 动效 · C3（章内三关） ---- */
+  --c3-ring-lift: 4;                        /* [候选] du，hover 上抬量 */
+  --c3-ring-press: 0.98;                    /* [候选] active 缩放 */
+  --c3-rim-hover: rgba(255, 255, 255, 0.88);/* [候选] 必须高于 rim-strong 0.76 */
+  --c3-float-center-amp: 4;                 /* [候选] du，大环动得少一点显稳 */
+  --c3-float-center-dur: 9.4s;              /* [候选] */
+  --c3-float-center-delay: 0s;              /* [候选] */
+  --c3-float-left-amp: 5;                   /* [候选] du，小环负责生气 */
+  --c3-float-left-dur: 8.2s;                /* [候选] */
+  --c3-float-left-delay: -2.6s;             /* [候选] 负 delay = 相位提前 */
+  --c3-float-right-amp: 5;                  /* [候选] */
+  --c3-float-right-dur: 10.1s;              /* [候选] */
+  --c3-float-right-delay: -5.2s;            /* [候选] */
+  --c3-in-center-delay: 0ms;                /* [候选] 入场错峰，按关卡顺序 01→02→03 */
+  --c3-in-left-delay: 120ms;                /* [候选] */
+  --c3-in-right-delay: 240ms;               /* [候选] */
+  --c3-focus-dur: 240ms;                    /* [候选] 焦点转移；JS 直接读这个值当定时器 */
+  --c3-focus-scale: 1.04;                   /* [候选] 被点环放大到 */
+  --c3-focus-dim: 0.45;                     /* [候选] 其余两环压暗到 */
+  --anim-card-dur: 300ms;                   /* [候选] 弹层卡片浮起 */
+  --anim-card-delay: 140ms;                 /* [候选] 等焦点转移做完再起 */
+  --anim-card-rise: 12;                     /* [候选] du */
+  --anim-card-from: 0.96;                   /* [候选] */
+}
