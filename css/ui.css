@@ -17,16 +17,78 @@
   overflow: hidden;
   container-type: inline-size;
   background: var(--page-bg);
+  /* --du 挂在 .stage 而不是 .screen-root：共享底图层是 .screen-root 的
+     兄弟节点，也要用 --du 换算几何，挂高一层两边都能继承到。 */
+  --du: calc(100vw / 1440);
 }
 
 .screen-root {
   position: absolute;
   inset: 0;
-  --du: calc(100vw / 1440);
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------
+   C2 家族共用的一条底图视频
+   ------------------------------------------------------------
+   放在 .stage 里、屏幕内容下面，只在 C2 家族（C2-0 与 C2-1~C2-4）显示。
+
+   为什么不让每屏自己带一个 <video>：那样每切一次屏都要新建一个元素、
+   重新挂载资源、从第 0 帧起播；而旧屏的叠影还停在原来那一帧上，
+   两边一对比，背景会明显"往回跳一下"。改成一条常驻视频之后，
+   C2 家族内部的跳转背景是完全连续的，切屏也不再有视频解码开销。
+   C2-0 与子页面本来就是同一条片子、同一套几何（--c2-bg-*），
+   所以这里可以共用；C1 用的是另一条片子，仍由 C1 自己带。 */
+.scene-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--anim-bg-fade) linear;
+}
+
+.stage[data-bg="c2"] .scene-bg-layer--c2,
+.stage[data-bg="p"] .scene-bg-layer--p {
+  opacity: 1;
+}
+
+/* 底图透明之后的兜底底色：C2 家族用中间调，家长端用页面底色。 */
+.stage[data-bg="c2"] {
+  background: var(--g-mid);
+}
+
+.stage[data-bg="p"] {
+  background: var(--page-bg);
+}
+
+/* C2 家族的常驻角色层。放在 screen-root 下方，切子页时只切换页面内容，
+   角色视频元素不重建，因此位置和播放时间都不变。 */
+.character-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--anim-bg-fade) linear;
+}
+
+.character-stage[data-visible="true"] {
+  opacity: 1;
+}
+
+.character-stage video,
+.character-stage img {
+  position: absolute;
+  left: calc(var(--character-stage-x) * var(--du));
+  top: calc(var(--character-stage-y) * var(--du));
+  width: calc(var(--character-stage-w) * var(--du));
+  height: calc(var(--character-stage-h) * var(--du));
+  object-fit: contain;
 }
 
 @supports (container-type: inline-size) {
-  .screen-root {
+  .stage {
     --du: calc(100cqw / 1440);
   }
 }
@@ -41,6 +103,92 @@
 
 .overlay-root:empty {
   display: none;
+}
+
+.bgm-layer {
+  position: absolute;
+  width: var(--lw-hair);
+  height: var(--lw-hair);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bgm-layer audio {
+  width: var(--lw-hair);
+  height: var(--lw-hair);
+}
+
+/* [临时·待定位] 右下角音量控件。容器宽度只随 hover / 键盘焦点展开。 */
+.bgm-volume {
+  position: absolute;
+  right: calc(var(--bgm-volume-right) * var(--du));
+  bottom: calc(var(--bgm-volume-bottom) * var(--du));
+  z-index: var(--bgm-volume-z);
+  display: flex;
+  align-items: center;
+  gap: var(--bgm-volume-gap);
+}
+
+.bgm-volume__button {
+  display: grid;
+  flex: 0 0 var(--bgm-volume-size);
+  width: var(--bgm-volume-size);
+  height: var(--bgm-volume-size);
+  padding: 0;
+  place-items: center;
+  border: var(--lw-hair) solid var(--bgm-volume-rim);
+  border-radius: 50%;
+  background: var(--bgm-volume-fill);
+  color: var(--bgm-volume-icon-color);
+  cursor: pointer;
+  transition:
+    background var(--bgm-volume-fade) linear,
+    border-color var(--bgm-volume-fade) linear;
+}
+
+.bgm-volume:hover .bgm-volume__button,
+.bgm-volume:focus-within .bgm-volume__button {
+  background: var(--bgm-volume-fill-hover);
+  border-color: var(--bgm-volume-accent);
+}
+
+.bgm-volume__button:focus-visible,
+.bgm-volume__range:focus-visible {
+  outline: var(--lw-emph) solid var(--bgm-volume-accent);
+  outline-offset: calc(var(--lw-emph) * 2);
+}
+
+.bgm-volume__icon {
+  width: var(--bgm-volume-icon-box);
+  height: var(--bgm-volume-icon-box);
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--bgm-volume-icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bgm-volume__range {
+  width: 0;
+  min-width: 0;
+  height: var(--bgm-volume-size);
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  accent-color: var(--bgm-volume-accent);
+  cursor: pointer;
+  transition:
+    width var(--bgm-volume-fade) ease,
+    opacity var(--bgm-volume-fade) linear;
+}
+
+.bgm-volume:hover .bgm-volume__range,
+.bgm-volume:focus-within .bgm-volume__range {
+  width: var(--bgm-volume-range-w);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .visually-hidden {
@@ -109,7 +257,9 @@
   top: calc(var(--c1-bg-y) * var(--du));
   width: calc(var(--c1-bg-w) * var(--du));
   height: calc(var(--c1-bg-h) * var(--du));
+  /* video 默认 object-fit: contain，会被这条覆盖成铺满 */
   object-fit: fill;
+  display: block;
 }
 
 .c1-start {
@@ -120,7 +270,8 @@
   padding: 0;
   background: transparent;
   color: inherit;
-  cursor: pointer;
+  pointer-events: none;
+  cursor: default;
 }
 
 .c1-switch {
@@ -209,32 +360,29 @@
   pointer-events: none;
 }
 
-.c1-start:focus-visible,
 .c1-switch:focus-visible {
   outline: var(--lw-emph) solid var(--on-g-1);
   outline-offset: calc(-1 * var(--sp-2));
 }
 
-/* 镜头包裹层：底图与鲸鱼必须同乘一个变换，否则底图放大时
-   烘焙在底图里的鲸鱼会从图层底下移出来 */
+/* 镜头包裹层。
+   [2026-11-16] 底图换成循环视频后，这里做了两处减法：
+
+   1. 删掉叠在上面的独立鲸鱼层——视频里鲸鱼是画在画面里的，再叠一张会出重影。
+   2. 停掉 anim-cam 的推拉。视频本身就是按"固定机位"生成的，
+      再叠一层 18 秒的缓慢推近，等于让整幅画面每个帧都被重新缩放一次；
+      慢速画面里这层重采样会被读成"镜头在轻微晃"。底图有真实运动之后，
+      这层合成的推拉不再提供任何东西，只会打架。
+
+   要回滚（比如退回静态底图）：把下面两行取消注释，
+   --c1-cam-origin-x/y 和 --anim-cam-* 都还在 tokens.css 里。
+   transform-origin: var(--c1-cam-origin-x) var(--c1-cam-origin-y);
+   animation: anim-cam var(--anim-cam-dur) var(--anim-ease-breath) infinite; */
 .c1-cam {
   position: absolute;
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  transform-origin: var(--c1-cam-origin-x) var(--c1-cam-origin-y);
-  animation: anim-cam var(--anim-cam-dur) var(--anim-ease-breath) infinite;
-}
-
-.c1-whale {
-  position: absolute;
-  left: calc(var(--c1-whale-x) * var(--du));
-  top: calc(var(--c1-whale-y) * var(--du));
-  width: calc(var(--c1-whale-w) * var(--du));
-  height: calc(var(--c1-whale-h) * var(--du));
-  z-index: -1;
-  pointer-events: none;
-  animation: anim-whale-drift var(--anim-whale-dur) var(--anim-ease-breath) infinite;
 }
 
 .c1-sheen {
@@ -291,7 +439,8 @@
    ------------------------------------------------------------ */
 
 .scr-c2 {
-  background: var(--g-mid);
+  /* 底色交给 .stage[data-bg="c2"] 与共享底图层，这里透明 */
+  background: transparent;
 }
 
 .c2-bg {
@@ -300,17 +449,6 @@
   width: calc(var(--c2-bg-w) * var(--du));
   height: calc(var(--c2-bg-h) * var(--du));
   object-fit: fill;
-}
-
-.c2-whale {
-  position: absolute;
-  left: calc(var(--c2-whale-x) * var(--du));
-  top: calc(var(--c2-whale-y) * var(--du));
-  width: calc(var(--c2-whale-w) * var(--du));
-  height: calc(var(--c2-whale-h) * var(--du));
-  z-index: 1;
-  object-fit: contain;
-  pointer-events: none;
 }
 
 .c2-title {
@@ -496,6 +634,16 @@
   color: var(--on-g-1);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  /* 和 C1 左上角「照护端入口」同一套：平时压暗，hover/聚焦回到全白。
+     压暗是为了让这组图标退到角色和环后面，但它仍然是可点的，所以只降透明度，
+     不改颜色、不加底色。 */
+  opacity: var(--c2-tool-idle);
+  transition: opacity var(--c2-tool-hover-dur) linear;
+}
+
+.c2-tool:hover,
+.c2-tool:focus-visible {
+  opacity: 1;
 }
 
 .c2-tool__icon {
@@ -554,10 +702,6 @@
     );
   box-shadow: inset 0 0 var(--ring-inset-blur) var(--ring-inset-spread)
     var(--glass-shadow);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-    contrast(var(--glass-contrast));
-  -webkit-backdrop-filter: blur(var(--glass-blur))
-    saturate(var(--glass-saturate)) contrast(var(--glass-contrast));
 }
 
 .ring-slot.is-current .ring-bubble {
@@ -660,9 +804,14 @@
 }
 
 /*
- * C2 玻璃环壁：不使用 border 铺满 28px，否则实色边框会盖住
- * backdrop-filter。壁由环边的径向 alpha 亮带构成，内部玻璃仍沿用
- * --ring-fill 的那层渐变；透出去的背景高光让左上自然更亮。
+ * C2 玻璃环壁：不使用 border 铺满 28px，否则实色边框会盖住内部玻璃层。
+ * 壁由环边的径向 alpha 亮带构成，内部玻璃仍沿用 --ring-fill 的那层渐变；
+ * 透出去的背景高光让左上自然更亮。
+ *
+ * 2026-11-16：已去掉 backdrop-filter，改为纯静态玻璃（为底图视频让路）。
+ * 实测 1440×900 逐像素比对：全图平均差 0.96/255，
+ * 带预览图的环几乎看不出差别，只有空气泡能察觉到背景轮廓变清晰。
+ * 试过加乳白纱补偿，反而偏离更多（13.9 对 6.1），所以不做补偿。
  */
 .scr-c2 .ring-bubble {
   border: 0;
@@ -715,40 +864,24 @@
   --ring-index-tracking: var(--tr-c2-index);
 }
 
-/* 地图装饰：只保留设计稿中实际存在的大弧线与小气泡 */
-.c2-arc {
+/* 主界面右上角「海域 / 选择」覆盖块
+   [2026-11-16] 原来的半包围圆弧（.c2-arc 三条 path）在这里退役：
+   新版设计把它换成了纯白 30% 的实心块，直接盖在文字标题上。
+   四角半径不一致是刻意的——右边贴着画面边缘，所以右上为 0。 */
+.c2-sel-panel {
   position: absolute;
-  left: calc(var(--c2-arc-x) * var(--du));
-  top: calc(var(--c2-arc-y) * var(--du));
-  width: calc(var(--c2-arc-w) * var(--du));
-  height: calc(var(--c2-arc-h) * var(--du));
-  z-index: 2;
-  overflow: visible;
-  color: var(--on-g-1);
+  left: calc(var(--c2-sel-x) * var(--du));
+  top: calc(var(--c2-sel-y) * var(--du));
+  width: calc(var(--c2-sel-w) * var(--du));
+  height: calc(var(--c2-sel-h) * var(--du));
+  z-index: 3;
+  background: var(--panel-fill);
+  border-radius:
+    calc(var(--c2-sel-r-tl) * var(--du))
+    calc(var(--c2-sel-r-tr) * var(--du))
+    calc(var(--c2-sel-r-br) * var(--du))
+    calc(var(--c2-sel-r-bl) * var(--du));
   pointer-events: none;
-}
-
-.c2-arc path {
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.c2-arc__a {
-  stroke-width: var(--c2-arc-stroke);
-  stroke-opacity: var(--c2-arc-a);
-}
-
-.c2-arc__b {
-  stroke-width: calc(var(--c2-arc-stroke) * 0.55);
-  stroke-opacity: var(--c2-arc-b);
-}
-
-.c2-arc__c {
-  stroke-width: calc(var(--c2-arc-stroke) * 0.22);
-  stroke-opacity: var(--c2-arc-c);
-  filter: blur(calc(1.5 * var(--du)));
 }
 
 .c2-bubble {
@@ -758,9 +891,6 @@
   border-radius: var(--r-full);
   background: var(--glass-fill);
   box-shadow: inset 0 0 var(--glass-inner-shadow) var(--glass-highlight);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur))
-    saturate(var(--glass-saturate));
   pointer-events: none;
 }
 
@@ -806,9 +936,6 @@
   background: var(--glass-fill);
   color: var(--on-g-1);
   box-shadow: inset 0 0 var(--glass-inner-shadow) var(--glass-highlight);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur))
-    saturate(var(--glass-saturate));
   font-family: var(--font-figma-number);
   font-size: var(--fs-body);
   line-height: var(--lh-none);
@@ -824,29 +951,6 @@
   border-color: var(--glass-rim-locked);
   opacity: var(--ring-locked-opacity);
   cursor: default;
-}
-
-.c2-complete {
-  position: absolute;
-  left: calc(var(--c2-complete-cx) * var(--du));
-  top: calc(var(--c2-complete-cy) * var(--du));
-  width: calc(var(--c2-complete-w) * var(--du));
-  height: calc(var(--c2-complete-h) * var(--du));
-  z-index: 12;
-  display: grid;
-  place-items: center;
-  margin: 0;
-  border: var(--lw-hair) solid var(--glass-rim);
-  border-radius: var(--r-full);
-  background: var(--glass-fill-strong);
-  font-family: var(--font-figma-label);
-  font-size: var(--fs-body);
-  letter-spacing: var(--tr-label);
-  text-indent: 0;
-  transform: translate(-50%, -50%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur))
-    saturate(var(--glass-saturate));
 }
 
 .figma-back {
@@ -961,8 +1065,716 @@
   --ring-index-dy: var(--c3-index-right-dy);
 }
 
+/* hover 后三环交换角色。角色由 JS 写在 data-ring-role 上，
+   页面重新挂载时 bindRingFocus() 会先恢复第 1 环居中。 */
+.scr-c3 .c3-ring[data-ring-role="center"],
+.scr-c2-3 .c3-ring[data-ring-role="center"] {
+  left: calc(var(--c3-center-x) * var(--du));
+  top: calc(var(--c3-center-y) * var(--du));
+  width: calc(var(--c3-center-size) * var(--du));
+  height: calc(var(--c3-center-size) * var(--du));
+  z-index: 7;
+}
+
+.scr-c2-3 .c3-ring[data-ring-role="center"] {
+  left: calc(var(--c2-3-center-x) * var(--du));
+  top: calc(var(--c2-3-center-y) * var(--du));
+  width: calc(var(--c2-3-center-size) * var(--du));
+  height: calc(var(--c2-3-center-size) * var(--du));
+}
+
+.scr-c3 .c3-ring[data-ring-role="left"],
+.scr-c2-3 .c3-ring[data-ring-role="left"] {
+  left: calc(var(--c3-left-x) * var(--du));
+  top: calc(var(--c3-left-y) * var(--du));
+  width: calc(var(--c3-left-size) * var(--du));
+  height: calc(var(--c3-left-size) * var(--du));
+  z-index: 6;
+}
+
+.scr-c3 .c3-ring[data-ring-role="right"],
+.scr-c2-3 .c3-ring[data-ring-role="right"] {
+  left: calc(var(--c3-right-x) * var(--du));
+  top: calc(var(--c3-right-y) * var(--du));
+  width: calc(var(--c3-right-size) * var(--du));
+  height: calc(var(--c3-right-size) * var(--du));
+  z-index: 6;
+}
+
+.scr-c3 .c3-ring[data-ring-role="center"] .ring-bubble,
+.scr-c2-3 .c3-ring[data-ring-role="center"] .ring-bubble {
+  border-width: var(--glass-ring-c3-lg);
+}
+
+.scr-c3 .c3-ring[data-ring-role="left"] .ring-bubble,
+.scr-c3 .c3-ring[data-ring-role="right"] .ring-bubble,
+.scr-c2-3 .c3-ring[data-ring-role="left"] .ring-bubble,
+.scr-c2-3 .c3-ring[data-ring-role="right"] .ring-bubble {
+  border-width: var(--glass-ring-c3-sm);
+}
+
+.scr-c3 .c3-ring[data-ring-role="center"] .ring-index,
+.scr-c2-3 .c3-ring[data-ring-role="center"] .ring-index {
+  --ring-index-dy: var(--c3-index-center-dy);
+  font-size: var(--fs-c3-index-lg);
+  line-height: var(--lh-c3-index-lg);
+}
+
+.scr-c3 .c3-ring[data-ring-role="left"] .ring-index,
+.scr-c2-3 .c3-ring[data-ring-role="left"] .ring-index {
+  --ring-index-dy: var(--c3-index-left-dy);
+  font-size: var(--fs-c3-index-sm);
+  line-height: var(--lh-c3-index-sm);
+}
+
+.scr-c3 .c3-ring[data-ring-role="right"] .ring-index,
+.scr-c2-3 .c3-ring[data-ring-role="right"] .ring-index {
+  --ring-index-dy: var(--c3-index-right-dy);
+  font-size: var(--fs-c3-index-sm);
+  line-height: var(--lh-c3-index-sm);
+}
+
 .c3-ring[data-state="locked"] .ring-index {
   opacity: var(--ring-locked-opacity);
+}
+
+/* ------------------------------------------------------------
+   海域内占位页 · C3-x-1/3/5 游玩
+   九个游玩页共用。底图仍是海域图（SeaUI.background），
+   这块面板只标明"此关存在、玩法未做"，不是最终游玩 UI。
+   ------------------------------------------------------------ */
+.scr-sea-play {
+  background: var(--g-light);
+}
+
+.sea-play-placeholder {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 5;
+  width: var(--sea-panel-w);
+  padding: var(--sea-panel-pad);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sea-panel-gap);
+  border: var(--lw-emph) solid var(--glass-rim-strong);
+  border-radius: var(--r-lg);
+  background: var(--sea-panel-fill);
+  color: var(--ink-1);
+  font-family: var(--font-sans);
+  text-align: center;
+  box-shadow: inset 0 0 var(--glass-inner-shadow) var(--glass-highlight);
+}
+
+.scr-sea-play:not(.scr-level-first) .sea-play-placeholder {
+  left: 62%;
+  width: calc(600 * var(--du));
+}
+
+.sea-placeholder__code {
+  margin: 0;
+  font-family: var(--font-figma-latin);
+  font-size: var(--fs-sea-code);
+  font-weight: var(--fw-reg);
+  letter-spacing: var(--tr-c3-index);
+  color: var(--ink-2);
+}
+
+.sea-play-placeholder h1,
+.sea-play-placeholder p {
+  margin: 0;
+}
+
+.sea-play-placeholder h1 {
+  font-size: var(--fs-sea-title);
+  line-height: var(--lh-none);
+  font-weight: var(--fw-bold);
+}
+
+.sea-play-placeholder > p:not(.sea-placeholder__code) {
+  font-size: var(--fs-sea-note);
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.sea-play-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sea-slot-gap);
+}
+
+.sea-play-actions button {
+  padding: var(--sea-slot-pad);
+  border: var(--lw-hair) solid var(--line-ink);
+  border-radius: var(--r-full);
+  background: var(--sea-slot-fill);
+  color: var(--ink-1);
+  font: inherit;
+  font-size: var(--fs-sea-note);
+  cursor: pointer;
+}
+
+.sea-play-actions button:focus-visible {
+  outline: var(--lw-emph) solid var(--glass-rim-strong);
+  outline-offset: calc(var(--lw-emph) * 2);
+}
+
+/* ------------------------------------------------------------
+   九关骨架 · 背景占位与固定角色
+   场景轨道由六段首尾衔接的占位图组成。九关共用同一套逐段流程；
+   正确动作推进期间轨道持续左移，反馈动画期间继续移动，停滞时停止。
+   ------------------------------------------------------------ */
+.scr-sea-play {
+  overflow: hidden;
+  background: var(--g-light);
+}
+
+.level-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.level-track {
+  display: flex;
+  width: 600%;
+  height: 100%;
+  transform: translate3d(calc(var(--level-scroll, 0) * -16.6666667%), 0, 0);
+  transition: transform var(--level-track-transition) var(--anim-ease-soft);
+  will-change: transform;
+}
+
+.level-track__segment {
+  flex: 0 0 16.6666667%;
+  height: 100%;
+}
+
+.level-track__segment img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+}
+
+.level-scene__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--surface-1) 52%, transparent),
+    transparent 34%,
+    transparent 78%,
+    color-mix(in oklab, var(--surface-1) 18%, transparent)
+  );
+}
+
+.level-hero {
+  position: absolute;
+  left: calc(var(--level-hero-x) * var(--du));
+  top: calc(var(--level-hero-y) * var(--du));
+  z-index: 4;
+  width: calc(var(--level-hero-w) * var(--du));
+  height: calc(var(--level-hero-h) * var(--du));
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.level-01-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  transition: opacity var(--dur-base) var(--anim-ease-soft);
+}
+
+.scr-sea-play.is-resulting .level-01-frame {
+  opacity: 0;
+}
+
+.level-hud {
+  position: absolute;
+  left: calc(var(--level-hud-x) * var(--du));
+  top: calc(var(--level-hud-y) * var(--du));
+  z-index: 8;
+  width: calc(var(--level-hud-w) * var(--du));
+  color: var(--ink-1);
+  font-family: var(--font-sans);
+  text-shadow: none;
+}
+
+.level-hud__name,
+.level-hud__step {
+  margin: 0;
+}
+
+.level-hud__name {
+  font-size: calc(28 * var(--du));
+  line-height: 1.2;
+  font-weight: var(--fw-bold);
+}
+
+.level-hud__step {
+  margin-top: calc(8 * var(--du));
+  font-family: var(--font-figma-latin);
+  font-size: calc(18 * var(--du));
+  letter-spacing: 0.18em;
+  color: var(--ink-2);
+}
+
+.level-task {
+  position: absolute;
+  left: calc(var(--level-target-x) * var(--du));
+  top: calc(var(--level-target-y) * var(--du));
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: calc(var(--level-target-size) * var(--du));
+  height: calc(var(--level-target-size) * var(--du));
+  border: var(--lw-emph) dashed var(--ink-3);
+  border-radius: var(--r-full);
+  background:
+    conic-gradient(
+      var(--ink-solid) var(--level-hold-angle, 0deg),
+      color-mix(in oklab, var(--surface-1) 38%, transparent) 0
+    );
+  box-shadow: inset 0 0 0 calc(16 * var(--du)) var(--surface-ghost);
+  color: var(--ink-1);
+}
+
+.level-task::before {
+  content: "";
+  position: absolute;
+  inset: calc(18 * var(--du));
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--surface-1) 84%, transparent);
+}
+
+.level-task__code {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-figma-title);
+  font-size: calc(92 * var(--du));
+  line-height: 1;
+}
+
+.level-task__caption {
+  position: absolute;
+  left: 50%;
+  bottom: calc(-54 * var(--du));
+  margin: 0;
+  transform: translateX(-50%);
+  color: var(--ink-2);
+  font-family: var(--font-figma-latin);
+  font-size: calc(16 * var(--du));
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+}
+
+.scr-level[data-level-action="mouth"] .level-task {
+  border-color: var(--g-deep);
+}
+
+.scr-level[data-level-action="resist"] .level-task {
+  border-style: solid;
+  border-color: var(--g-deep);
+}
+
+.scr-level[data-level-action="blow"] .level-task {
+  border-color: var(--g-deep);
+}
+
+.level-progress {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--level-progress-y) * var(--du));
+  z-index: 8;
+  width: calc(var(--level-progress-w) * var(--du));
+  height: calc(8 * var(--du));
+  overflow: hidden;
+  transform: translateX(-50%);
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--ink-solid) 16%, transparent);
+}
+
+.level-progress__fill {
+  display: block;
+  width: calc(var(--level-progress, 0) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ink-solid);
+  transition: width var(--dur-base) linear;
+}
+
+.level-feedback {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  width: calc(360 * var(--du));
+  height: calc(180 * var(--du));
+  transform: translate(-50%, -50%);
+  border: var(--lw-emph) solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--surface-1) 78%, transparent);
+  color: var(--ink-1);
+  font-family: var(--font-sans);
+  text-align: center;
+}
+
+.level-feedback[hidden] {
+  display: none;
+}
+
+.level-feedback__label {
+  display: block;
+  font-size: calc(28 * var(--du));
+  font-weight: var(--fw-bold);
+}
+
+.level-feedback__duration {
+  display: block;
+  margin-top: calc(10 * var(--du));
+  font-family: var(--font-figma-latin);
+  font-size: calc(18 * var(--du));
+  letter-spacing: 0.14em;
+  color: var(--ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-track,
+  .level-progress__fill {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   L2 · 校准浮窗
+   浮窗不另铺背景：C3 的海域底图继续播放，只把环和返回键淡出。
+   这样海域 1/2/3 都自然跟随各自原来的底图，也不会多解码一路视频。
+   主卡与三个动作框都直接使用纯白 30%，圆角统一 40。
+   ------------------------------------------------------------ */
+
+.scr-c3.is-calibrating .ring-slot:not(.is-focus),
+.scr-c3.is-calibrating .ring-slot.is-focus,
+.scr-c3.is-calibrating.is-leaving .ring-slot:not(.is-focus),
+.scr-c3.is-calibrating.is-leaving .ring-slot.is-focus,
+.scr-c3.is-calibrating .figma-back {
+  opacity: 0;
+  animation: none;
+  transition: opacity var(--c3-focus-dur) linear;
+}
+
+.scr-c3.is-calibrating .ring-slot.is-focus {
+  transform: none;
+}
+
+.overlay-root[data-overlay="l2"] {
+  background: var(--modal-mask);
+}
+
+.overlay-card.calibration-card {
+  position: relative;
+  width: calc(var(--calibration-card-w) * var(--du));
+  height: calc(var(--calibration-card-h) * var(--du));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--panel-radius) * var(--du));
+  background: var(--panel-fill);
+  color: var(--on-g-1);
+  font-family: var(--font-figma-label);
+  box-shadow: none;
+}
+
+.calibration-card__title {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--calibration-title-cy) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-calibration-title);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-none);
+  letter-spacing: var(--tr-calibration-title);
+  text-indent: var(--tr-calibration-title);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.calibration-actions {
+  position: absolute;
+  inset: 0;
+}
+
+.calibration-action {
+  position: absolute;
+  top: calc(var(--calibration-actions-y) * var(--du));
+  width: calc(var(--calibration-action-w) * var(--du));
+  height: calc(var(--calibration-action-hit-h) * var(--du));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.calibration-action--one {
+  left: calc(var(--calibration-action-one-x) * var(--du));
+}
+
+.calibration-action--two {
+  left: calc(var(--calibration-action-two-x) * var(--du));
+}
+
+.calibration-action--three {
+  left: calc(var(--calibration-action-three-x) * var(--du));
+}
+
+.calibration-action__frame {
+  position: absolute;
+  inset: 0 0 auto;
+  width: 100%;
+  height: calc(var(--calibration-action-h) * var(--du));
+  overflow: hidden;
+  border-radius: calc(var(--panel-radius) * var(--du));
+  background: var(--panel-fill);
+}
+
+.calibration-action__media {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.calibration-action__sprite {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--calibration-sprite-size) * var(--du));
+  height: calc(var(--calibration-sprite-size) * var(--du));
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-size: 200% 200%;
+  transform: translate(-50%, -50%);
+  animation: anim-calibration-sprite var(--calibration-anim-dur) steps(1, end)
+    infinite;
+  animation-play-state: paused;
+}
+
+.calibration-card[data-calibration-step="mouth"]
+  .calibration-action__media[data-calibration-media="mouth"]
+  .calibration-action__sprite,
+.calibration-card[data-calibration-step="resist"]
+  .calibration-action__media[data-calibration-media="resist"]
+  .calibration-action__sprite,
+.calibration-card[data-calibration-step="blow"]
+  .calibration-action__media[data-calibration-media="blow"]
+  .calibration-action__sprite {
+  animation-play-state: running;
+}
+
+.calibration-action__media[data-calibration-media="mouth"]
+  .calibration-action__sprite,
+.calibration-action__media[data-calibration-media="resist"]
+  .calibration-action__sprite {
+  background-image: var(--calibration-mouth-image);
+}
+
+.calibration-action__media[data-calibration-media="blow"]
+  .calibration-action__sprite {
+  width: calc(var(--calibration-blow-sprite-size) * var(--du));
+  height: calc(var(--calibration-blow-sprite-size) * var(--du));
+  background-image: var(--calibration-blow-image);
+}
+
+.calibration-action__label {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--calibration-action-label-cy) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-calibration-label);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-none);
+  letter-spacing: var(--tr-calibration-label);
+  text-indent: var(--tr-calibration-label);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+html[data-input-action="mouth"]
+  .calibration-action[data-calibration-name="mouth"]
+  .calibration-action__frame,
+html[data-input-action="resist"]
+  .calibration-action[data-calibration-name="resist"]
+  .calibration-action__frame,
+html[data-input-action="blow"]
+  .calibration-action[data-calibration-name="blow"]
+  .calibration-action__frame {
+  outline: var(--lw-emph) solid var(--on-g-1);
+  outline-offset: calc(var(--lw-emph) * 2);
+}
+
+/* ------------------------------------------------------------
+   C3-x-2/4/6 · 单局结算
+   与 L2 共用同一层全屏遮罩、纯白 30% 浮窗和 40 圆角。
+   设计稿只画了「通关！」与三颗星，下半区先保持留白。
+   现在固定三星；.is-missed 的 50% 状态已留给后续判定。
+   ------------------------------------------------------------ */
+.overlay-root[data-overlay^="c3-"] {
+  background: var(--modal-mask);
+}
+
+.scr-sea-play.is-resulting .sea-play-placeholder {
+  opacity: 0;
+  transition: opacity var(--anim-card-dur) linear;
+}
+
+.scr-sea-play.is-resulting .level-hud,
+.scr-sea-play.is-resulting .level-task,
+.scr-sea-play.is-resulting .level-progress {
+  opacity: 0;
+  transition: opacity var(--anim-card-dur) linear;
+}
+
+.overlay-card.sea-result-card {
+  position: relative;
+  z-index: 1;
+  top: calc(var(--result-card-top-shift) * var(--du));
+  width: calc(var(--result-card-w) * var(--du));
+  height: calc(var(--result-card-h) * var(--du));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--panel-radius) * var(--du));
+  background: var(--panel-fill);
+  color: var(--on-g-1);
+  font-family: var(--font-figma-label);
+  text-align: center;
+  box-shadow: none;
+}
+
+.sea-result-character {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--result-character-top) * var(--du));
+  z-index: 2;
+  width: calc(var(--result-character-size) * var(--du));
+  height: calc(var(--result-character-size) * var(--du));
+  object-fit: contain;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.sea-result-card__title {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--result-title-cy) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-result-title);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-none);
+  letter-spacing: var(--tr-result-title);
+  text-indent: var(--tr-result-title);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.sea-result-stars {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--result-stars-cy) * var(--du));
+  display: flex;
+  gap: calc(var(--result-star-gap) * var(--du));
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.sea-result-star {
+  display: block;
+  position: relative;
+  width: calc(var(--result-star-size) * var(--du));
+  height: calc(var(--result-star-size) * var(--du));
+  color: var(--on-g-1);
+  transform-origin: 50% 50%;
+}
+
+.sea-result-star.is-earned {
+  animation: anim-result-star-light 500ms var(--anim-ease-soft) both;
+  animation-delay: calc(280ms + var(--star-index, 0) * 260ms);
+}
+
+.sea-result-star.is-earned::after {
+  content: "";
+  position: absolute;
+  inset: calc(-16 * var(--du));
+  border: var(--lw-emph) solid var(--line-2);
+  border-radius: var(--r-full);
+  opacity: 0;
+  animation: anim-result-star-ring 700ms var(--anim-ease-soft) both;
+  animation-delay: calc(280ms + var(--star-index, 0) * 260ms);
+}
+
+.sea-result-star.is-missed {
+  opacity: var(--result-missed-opacity);
+}
+
+.sea-result-star.is-earned.is-missed {
+  animation: none;
+  opacity: var(--result-missed-opacity);
+}
+
+.sea-result-star.is-earned.is-missed::after {
+  display: none;
+}
+
+.sea-result-star svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sea-result-star path {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+/* 设计里下半区没有可见按钮。整层遮罩都作为继续入口，
+   包括卡片外部的暗场区域。 */
+.sea-result-continue {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sea-result-continue:focus-visible {
+  outline: var(--lw-emph) solid var(--on-g-1);
+  outline-offset: calc(-2 * var(--lw-emph));
 }
 
 /* ------------------------------------------------------------
@@ -973,6 +1785,47 @@
 @keyframes anim-cam {
   0%, 100% { transform: scale(1); }
   50%      { transform: scale(var(--anim-cam-scale)); }
+}
+
+/* 四宫格按阅读顺序播放：左上 → 右上 → 左下 → 右下。
+   每帧保持到下一格切换，不做跨格的平滑插值。 */
+@keyframes anim-calibration-sprite {
+  0%, 24.99%       { background-position: 0 0; }
+  25%, 49.99%      { background-position: 100% 0; }
+  50%, 74.99%      { background-position: 0 100%; }
+  75%, 100%        { background-position: 100% 100%; }
+}
+
+@keyframes anim-result-star-light {
+  0% {
+    opacity: 0.16;
+    transform: scale(0.72);
+    filter: brightness(0.45);
+  }
+  58% {
+    opacity: 1;
+    transform: scale(1.16);
+    filter: brightness(1.25);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes anim-result-star-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  36% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
 }
 
 /* 只驱动 opacity 的呼吸，提示文字用 */
@@ -1003,11 +1856,6 @@
   }
 }
 
-@keyframes anim-whale-drift {
-  0%, 100% { transform: translateX(calc(-1 * var(--anim-whale-drift) * var(--du))); }
-  50%      { transform: translateX(calc(var(--anim-whale-drift) * var(--du))); }
-}
-
 @keyframes anim-sheen {
   0%, 100% { transform: translateX(calc(-1 * var(--anim-sheen-shift) * 1%)); }
   50%      { transform: translateX(calc(var(--anim-sheen-shift) * 1%)); }
@@ -1022,71 +1870,26 @@
 
 /* ------------------------------------------------------------
    P1 · 家长端概览
-   底图已按 16:9 铺满。内容排版未定，.p1-stub 仅用于开发期跳转。
+   底图按 16:9 铺满。四块半透明白框的位置见 tokens 的 --p1-* 一批。
    ------------------------------------------------------------ */
 
+/* 家长端：底色交给 .stage[data-bg="p"] 与共享底图层，这里透明。
+   否则这一屏的不透明底色会把身下的视频层整个盖住。 */
 .scr-p1 {
-  background: var(--page-bg);
+  background: transparent;
 }
 
+/* 家长端底图视频。几何沿用原来那张静态图（--p1-bg-*：1600×900，
+   左右各溢出 80，正好 16:9 无变形铺满 1440×900 的画布）。
+   播放倍速由 --p1-bg-rate 给（见 tokens），这里只做转接——
+   CSS 里不出现数字，js 那边读 --bg-playback-rate 这一个名字。 */
 .p1-bg {
   left: calc(var(--p1-bg-x) * var(--du));
   top: calc(var(--p1-bg-y) * var(--du));
   width: calc(var(--p1-bg-w) * var(--du));
   height: calc(var(--p1-bg-h) * var(--du));
   object-fit: fill;
-}
-
-/* 开发期占位跳转：不属于设计，正式排版确定后整块删除 */
-.p1-stub {
-  position: absolute;
-  left: calc(var(--p1-stub-x) * var(--du));
-  top: calc(var(--p1-stub-y) * var(--du));
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--p1-stub-note-gap) * var(--du));
-  margin: 0;
-  padding: 0;
-}
-
-.p1-stub__note {
-  margin: 0;
-  font-family: var(--font-figma-label);
-  font-size: var(--fs-label);
-  line-height: var(--lh-none);
-  color: var(--on-g-2);
-}
-
-.p1-stub__links {
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--p1-stub-gap) * var(--du));
-}
-
-.p1-stub__link {
-  display: block;
-  width: max-content;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-family: var(--font-figma-label);
-  font-size: var(--fs-p1-stub);
-  line-height: var(--lh-none);
-  color: var(--on-g-2);
-  text-align: left;
-  cursor: pointer;
-}
-
-.p1-stub__link:hover,
-.p1-stub__link:focus-visible {
-  color: var(--on-g-1);
-}
-
-.p1-stub__link:focus-visible {
-  outline: var(--lw-emph) solid var(--on-g-1);
-  outline-offset: var(--sp-2);
+  --bg-playback-rate: var(--p1-bg-rate);
 }
 
 /* ------------------------------------------------------------
@@ -1125,25 +1928,9 @@
   }
 }
 
-@keyframes anim-whale-swim {
-  0%, 100% {
-    transform: translateY(calc(-1 * var(--c2-whale-amp) * var(--du)))
-      rotate(calc(-1 * var(--c2-whale-tilt) * 1deg));
-  }
-  50% {
-    transform: translateY(calc(var(--c2-whale-amp) * var(--du)))
-      rotate(calc(var(--c2-whale-tilt) * 1deg));
-  }
-}
-
 @keyframes anim-bubble-bump {
   0%, 100% { transform: translateY(calc(-1 * var(--bub-amp) * var(--du))); }
   50%      { transform: translateY(calc(var(--bub-amp) * var(--du))); }
-}
-
-@keyframes anim-arc-breathe {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: var(--c2-arc-min); }
 }
 
 @keyframes anim-veil-breathe {
@@ -1183,13 +1970,6 @@
     var(--ring-delay, 0s) infinite;
 }
 
-.scr-c2 .c2-whale {
-  transform-origin: 50% 55%;
-  animation:
-    anim-fade-in var(--c2-whale-in-dur) linear backwards,
-    anim-whale-swim var(--c2-whale-dur) var(--anim-ease-breath) infinite;
-}
-
 .scr-c2 .c2-bubble {
   animation: anim-bubble-bump var(--bub-dur, 8s) var(--anim-ease-breath)
     var(--bub-delay, 0s) infinite;
@@ -1211,10 +1991,6 @@
   --bub-amp: var(--c2-bump-c-amp);
   --bub-dur: var(--c2-bump-c-dur);
   --bub-delay: var(--c2-bump-c-delay);
-}
-
-.scr-c2 .c2-arc {
-  animation: anim-arc-breathe var(--c2-arc-dur) var(--anim-ease-breath) infinite;
 }
 
 /* 当前环：预览蒙层极缓呼吸，用亮度标记“现在是这个”，不加徽章不加描边 */
@@ -1276,9 +2052,8 @@
 .scr-c2.is-leaving .c2-title,
 .scr-c2.is-leaving .c2-side-title,
 .scr-c2.is-leaving .c2-tools,
-.scr-c2.is-leaving .c2-arc,
+.scr-c2.is-leaving .c2-sel-panel,
 .scr-c2.is-leaving .c2-bubble,
-.scr-c2.is-leaving .c2-whale,
 .scr-c2.is-leaving .figma-back,
 .scr-c2.is-leaving .ring-slot {
   opacity: 0;
@@ -1299,42 +2074,67 @@
    ------------------------------------------------------------ */
 
 /* 参数映射：设计值留在 tokens.css，这里只做挂接 */
-.scr-c3 .c3-ring--center .ring-float {
+.scr-c3 .c3-ring--center .ring-float,
+.scr-c2-3 .c3-ring--center .ring-float {
   --ring-amp: var(--c3-float-center-amp);
   --ring-dur: var(--c3-float-center-dur);
   --ring-delay: var(--c3-float-center-delay);
 }
 
-.scr-c3 .c3-ring--left .ring-float {
+.scr-c3 .c3-ring--left .ring-float,
+.scr-c2-3 .c3-ring--left .ring-float {
   --ring-amp: var(--c3-float-left-amp);
   --ring-dur: var(--c3-float-left-dur);
   --ring-delay: var(--c3-float-left-delay);
 }
 
-.scr-c3 .c3-ring--right .ring-float {
+.scr-c3 .c3-ring--right .ring-float,
+.scr-c2-3 .c3-ring--right .ring-float {
   --ring-amp: var(--c3-float-right-amp);
   --ring-dur: var(--c3-float-right-dur);
   --ring-delay: var(--c3-float-right-delay);
 }
 
-/* 环与编号一起浮：动画挂在 .ring-float 上，编号在它内部自动跟随 */
-.scr-c3 .ring-float {
+/* 环与编号一起浮：动画挂在 .ring-float 上，编号在它内部自动跟随。
+   .scr-c2-3（外观）共用同一批参数——它就是「复用 C3-1 的效果」。 */
+.scr-c3 .ring-float,
+.scr-c2-3 .ring-float {
   animation: anim-ring-float var(--ring-dur, 8s) var(--anim-ease-breath)
     var(--ring-delay, 0s) infinite;
 }
 
 /* 入场：挂在按钮上，和浮动分处两个元素 */
-.scr-c3 .ring-slot {
+.scr-c3 .ring-slot,
+.scr-c2-3 .ring-slot {
   transition:
+    left var(--ring-swap-dur) var(--anim-ease-soft),
+    top var(--ring-swap-dur) var(--anim-ease-soft),
+    width var(--ring-swap-dur) var(--anim-ease-soft),
+    height var(--ring-swap-dur) var(--anim-ease-soft),
     transform 220ms var(--anim-ease-soft),
     opacity var(--c3-focus-dur) linear;
   animation: anim-ring-in var(--anim-ring-in-dur) var(--anim-ease-soft)
     var(--ring-in-delay, 0ms) backwards;
 }
 
-.scr-c3 .c3-ring--center { --ring-in-delay: var(--c3-in-center-delay); }
-.scr-c3 .c3-ring--left   { --ring-in-delay: var(--c3-in-left-delay); }
-.scr-c3 .c3-ring--right  { --ring-in-delay: var(--c3-in-right-delay); }
+.scr-c3 .ring-bubble,
+.scr-c2-3 .ring-bubble {
+  transition: border-width var(--ring-swap-dur) var(--anim-ease-soft);
+}
+
+.scr-c3 .ring-index,
+.scr-c2-3 .ring-index {
+  transition:
+    top var(--ring-swap-dur) var(--anim-ease-soft),
+    font-size var(--ring-swap-dur) var(--anim-ease-soft);
+}
+
+.scr-c3 .c3-ring--center,
+.scr-c2-3 .c3-ring--center { --ring-in-delay: var(--c3-in-center-delay); }
+.scr-c3 .c3-ring--left,
+.scr-c2-3 .c3-ring--left   { --ring-in-delay: var(--c3-in-left-delay); }
+.scr-c3 .c3-ring--right,
+.scr-c2-3 .c3-ring--right  { --ring-in-delay: var(--c3-in-right-delay); }
 
 .scr-c3 .ring-slot:not(:disabled):hover {
   transform: translateY(calc(-1 * var(--c3-ring-lift) * var(--du)));
@@ -1384,12 +2184,12 @@
     --c2-title-swap-out: 0ms;
     --c2-title-swap-in: 0ms;
     --c3-focus-dur: 1ms;
+    --ring-swap-dur: 1ms;
     --anim-card-dur: 1ms;
     --anim-card-delay: 0ms;
   }
 
   .c1-cam,
-  .c1-whale,
   .c1-sheen,
   .c1-title,
   .c1-hint,
@@ -1411,9 +2211,7 @@
 
   .scr-c2 .ring-float,
   .scr-c2 .ring-slot,
-  .scr-c2 .c2-whale,
   .scr-c2 .c2-bubble,
-  .scr-c2 .c2-arc,
   .scr-c2 .c2-title,
   .scr-c2 .c2-side-title,
   .scr-c2 .c2-tools,
@@ -1432,5 +2230,1337 @@
     animation: none;
     transition: none;
   }
+
+  /* 减少动态时停在“动作最清楚”的左下帧：
+     抿嘴是压紧后的窄唇，吹气是完整的圆孔。 */
+  .calibration-action__sprite {
+    animation: none;
+    background-position: 0 100%;
+  }
+
+  /* 外观页复用同一批环动画，这里一并停掉 */
+  .scr-c2-3 .ring-float,
+  .scr-c2-3 .ring-slot,
+  .sea-result-star.is-earned,
+  .sea-result-star.is-earned::after {
+    animation: none;
+    transition: none;
+  }
+
+  /* 子页面 / 家长端的入场只是淡入，没有位移和缩放，
+     但既然用户要求减少动效，就不要渐变了，直接显示最终状态 */
+  .scr-c2page .page-head > *,
+  .scr-c2page .panel-box,
+  .scr-c2page .panel-grid-3x3,
+  .scr-c2page .panel-label,
+  .scr-c2page .figma-back,
+  .scr-p1 .p-title,
+  .scr-p1 .p-tabs,
+  .scr-p1 .panel-p1-a,
+  .scr-p1 .panel-p1-b,
+  .scr-p1 .panel-p1-c,
+  .scr-p1 .panel-p1-d,
+  .scr-p1 .panel-p2-a,
+  .scr-p1 .panel-p2-b,
+  .scr-p1 .panel-label,
+  .scr-p1 .figma-back {
+    animation: none;
+    opacity: 1;
+  }
+
+  .character-stage[data-motion="float"] > img,
+  .coll-thumb img {
+    animation: none;
+    transition: none;
+  }
+
+  .scene-bg-layer {
+    transition: none;
+  }
+
+  .bgm-volume__button,
+  .bgm-volume__range {
+    transition: none;
+  }
 }
 
+
+/* ------------------------------------------------------------
+   动效 · 切屏交叉淡化
+
+   为什么是「克隆旧屏」而不是直接给新屏加淡入：
+   innerHTML 一换旧屏就没了，中间必然露出 .stage 的页面底色（深蓝），
+   看起来就是"先闪一下纯色"。克隆一份盖在上面淡出，旧画面一直在，
+   新屏在底下正常播自己的入场动画，两边衔接得上。
+   ------------------------------------------------------------ */
+
+.screen-ghost {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  animation: anim-screen-out var(--anim-screen-out-dur) linear forwards;
+}
+
+/* 幽灵层只负责"定格画面"。里面的环和标题如果继续跑动画，
+   会和底下真屏的入场重复，看起来像两套东西各动各的。 */
+.screen-ghost *,
+.screen-ghost *::before,
+.screen-ghost *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+@keyframes anim-screen-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------
+   C2 家族 · 共用外壳
+   ------------------------------------------------------------
+   C2-0 主界面 / 设置 / 成就 / 外观 / 图鉴 五屏共用同一条
+   底图动画（assets/video/主界面底图动画.mp4），所以底图规则只写一份。
+   各屏之间只有内容层不同。 */
+
+.scr-c2page {
+  /* 同 .scr-c2：底色由共享底图层负责 */
+  background: transparent;
+}
+
+/* 子页面入场：页头逐件淡入 → 底板整组淡入。
+   只用 opacity（anim-fade-in），不用带动画的 transform ——
+   页头里每一件都是靠 translate(-50%,-50%) 居中的，任何改 transform 的
+   关键帧都会把它们甩走（anim-rise-in 就踩过这个坑）。
+   时长和 C2-0 的入场同节奏，跨屏时旧屏在 160ms 叠影里散掉，接得上。 */
+.scr-c2page .page-head__meta,
+.scr-c2page .page-head__rule,
+.scr-c2page .page-head__level,
+.scr-c2page .page-head__rule-h,
+.scr-c2page .page-head__hero,
+.scr-c2page .page-head__name,
+.scr-c2page .page-head__title,
+.scr-c2page .panel-box,
+.scr-c2page .panel-grid-3x3,
+.scr-c2page .panel-label,
+.scr-c2page .figma-back {
+  animation: anim-fade-in var(--page-in-dur) var(--anim-ease-soft) backwards;
+}
+
+.scr-c2page .page-head__meta   { animation-delay: 0ms; }
+.scr-c2page .page-head__rule   { animation-delay: 40ms; }
+.scr-c2page .page-head__level  { animation-delay: 80ms; }
+.scr-c2page .page-head__rule-h { animation-delay: 120ms; }
+.scr-c2page .page-head__hero   { animation-delay: 150ms; }
+.scr-c2page .page-head__name   { animation-delay: 210ms; }
+.scr-c2page .page-head__title  { animation-delay: 270ms; }
+.scr-c2page .panel-box,
+.scr-c2page .panel-grid-3x3,
+.scr-c2page .panel-label        { animation-delay: 180ms; }
+.scr-c2page .figma-back         { animation-delay: 120ms; }
+
+/* 家长端两页：页名 → 标签 → 底板，同样只动 opacity */
+.scr-p1 .p-title,
+.scr-p1 .p-tabs,
+.scr-p1 .panel-p1-a,
+.scr-p1 .panel-p1-b,
+.scr-p1 .panel-p1-c,
+.scr-p1 .panel-p1-d,
+.scr-p1 .panel-p2-a,
+.scr-p1 .panel-p2-b,
+.scr-p1 .panel-label,
+.scr-p1 .figma-back {
+  animation: anim-fade-in var(--page-in-dur) var(--anim-ease-soft) backwards;
+}
+
+.scr-p1 .p-title      { animation-delay: 0ms; }
+.scr-p1 .p-tabs       { animation-delay: 90ms; }
+.scr-p1 .figma-back   { animation-delay: 90ms; }
+.scr-p1 .panel-p1-a,
+.scr-p1 .panel-p1-b,
+.scr-p1 .panel-p1-c,
+.scr-p1 .panel-p1-d,
+.scr-p1 .panel-p2-a,
+.scr-p1 .panel-p2-b,
+.scr-p1 .panel-label  { animation-delay: 150ms; }
+
+/* .c2-bg 的几何（--c2-bg-x/y/w/h）与 C2-0 完全一致，直接复用那个规则 */
+
+/* 子页面页头：海域名压成两行，右边接页名。
+   和 C2-0 的 .c2-title 是两套东西——C2-0 是「01 珊瑚森林」横排一行，
+   不共用样式，只共用同一批字体变量。
+
+   坐标系：这个容器铺满整屏，所有子元素直接用"设计稿绝对坐标"，
+   不再像 .c2-title 那样先偏移 (95,100) 再叠内部坐标——
+   两套坐标混用是这个组件第一版出错的原因，现在统一成绝对坐标。
+   C2-0 那批 meta/level 的 token 是相对标题框的，所以下面补回偏移量。 */
+.page-head {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* 数字比「01」宽出多少，海域名和页名就整体右移多少。
+   01 不给规则，--head-shift 走 fallback 0，也就是 Figma 的原位置。
+   数值来自 tokens.css 那张实测表。 */
+.page-head[data-hero="02"] { --head-shift: var(--head-shift-02); }
+.page-head[data-hero="03"] { --head-shift: var(--head-shift-03); }
+.page-head[data-hero="04"] { --head-shift: var(--head-shift-04); }
+.page-head[data-hero="05"] { --head-shift: var(--head-shift-05); }
+.page-head[data-hero="06"] { --head-shift: var(--head-shift-06); }
+.page-head[data-hero="07"] { --head-shift: var(--head-shift-07); }
+.page-head[data-hero="08"] { --head-shift: var(--head-shift-08); }
+
+.page-head__meta,
+.page-head__level {
+  position: absolute;
+  margin: 0;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.page-head__meta {
+  left: calc((var(--c2-title-x) + var(--c2-meta-cx)) * var(--du));
+  top: calc((var(--c2-title-y) + var(--c2-meta-cy)) * var(--du));
+  height: calc(var(--c2-meta-h) * var(--du));
+  font-family: var(--font-figma-label);
+  font-size: var(--fs-c2-meta);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-meta);
+  letter-spacing: var(--tr-c2-meta);
+  text-indent: var(--tr-c2-meta);
+}
+
+.page-head__level {
+  left: calc((var(--c2-title-x) + var(--c2-level-cx)) * var(--du));
+  top: calc((var(--c2-title-y) + var(--c2-level-cy)) * var(--du));
+  height: calc(var(--c2-level-h) * var(--du));
+  font-family: var(--font-figma-latin);
+  font-size: var(--fs-c2-level);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-c2-meta);
+  letter-spacing: var(--tr-c2-level);
+  text-indent: var(--tr-c2-level);
+}
+
+.page-head__rule {
+  position: absolute;
+  left: calc((var(--c2-title-x) + var(--c2-rule-v-x)) * var(--du));
+  top: calc((var(--c2-title-y) + var(--c2-rule-v-y)) * var(--du));
+  width: 0;
+  height: calc(var(--c2-rule-v-h) * var(--du));
+  border-left: var(--lw-emph) solid var(--on-g-1);
+}
+
+/* 标题下面那条横杠。和 C2-0 的 .c2-title__rule-h 是同一根，
+   几何直接复用 --c2-rule-h-*（C2-0 那组 token 本来就是按设计稿量的），
+   只是这里的坐标系是整屏，所以要补回 --c2-title-x/y 的偏移。
+   宽度也跟着 --head-shift 走：这根杠本来横跨「数字 + 海域名」整组，
+   数字一变宽、海域名右移，杠不跟着长就会短一截、停在海域名中间。 */
+.page-head__rule-h {
+  position: absolute;
+  left: calc((var(--c2-title-x) + var(--c2-rule-h-x)) * var(--du));
+  top: calc((var(--c2-title-y) + var(--c2-rule-h-y)) * var(--du));
+  width: calc((var(--c2-rule-h-w) + var(--head-shift, 0)) * var(--du));
+  height: 0;
+  border-top: var(--c2-rule-h-stroke) solid var(--on-g-1);
+}
+
+/* 「01」序号：子页面里比 C2-0 小一档（量测墨迹 82×67）
+   [2026-11-16] 改成**左沿固定、只往右长**。原来按 --page-hero-cx 居中，
+   而「1」是窄字形、「0/2/3」宽，盒子一变宽就往两边同时长，02/03 的右沿
+   因此探进海域名里。纵向仍居中，所以 transform 只留 translateY。 */
+.page-head__hero {
+  position: absolute;
+  left: calc(var(--page-hero-left) * var(--du));
+  top: calc(var(--page-hero-cy) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-number);
+  font-size: var(--page-hero-size);
+  font-weight: var(--fw-reg);
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+/* 海域名：子页面里折成两行（珊瑚 / 森林）。量测每个字约 45×42，
+   所以字号 46，一行的宽度 = 两字 + 两份字距。
+   --head-shift 由数字的加宽量决定（见 tokens.css 那张表），01 时是 0。 */
+.page-head__name {
+  position: absolute;
+  left: calc((var(--page-name-cx) + var(--head-shift, 0)) * var(--du));
+  top: calc(var(--page-name-cy) * var(--du));
+  width: calc(2 * var(--page-name-size) + 3 * var(--tr-c2-title));
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: var(--page-name-size);
+  font-weight: var(--fw-reg);
+  /* 行高 1.0：两行墨迹起点相距 48（Figma 量测），字号也是 48 */
+  line-height: 1;
+  letter-spacing: var(--tr-c2-title);
+  white-space: normal;
+  word-break: break-all;
+  transform: translate(-50%, -50%);
+}
+
+/* 页名：设置 / 成就 / 外观 / 图鉴。量测两个字 181 宽、86 高，字号 96。
+   --page-title-push 是**故意偏离设计稿**的量（见 tokens 的注释）：
+   海域名盒子右沿 313.8、页名盒子左沿 310，原本重叠 3.8，墨迹间隙只有 14，
+   看着就是黏在一起。往右推 16 之后墨迹间隙 30。 */
+.page-head__title {
+  position: absolute;
+  left: calc((var(--page-title-cx) + var(--page-title-push) + var(--head-shift, 0)) * var(--du));
+  top: calc(var(--page-title-cy) * var(--du));
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: calc(var(--page-title-h) * var(--du));
+  font-weight: var(--fw-reg);
+  line-height: 1;
+  /* 页名没有字距：Figma 里两字墨迹起点相距 96，正好等于字号。
+     之前沿用标题的 0.08em，两个字被撑宽 8px，直接顶到左边的海域名上。 */
+  letter-spacing: var(--page-title-tr);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+/* ------------------------------------------------------------
+   半透明白框 · 通用
+   ------------------------------------------------------------
+   成就 / 图鉴 / 家长端都用这一套：纯白 30% + 40 圆角。
+   框内这一版先不放内容，只立框架。 */
+
+.panel-box {
+  position: absolute;
+  background: var(--panel-fill);
+  border-radius: calc(var(--panel-radius) * var(--du));
+  pointer-events: none;
+}
+
+/* 成就三块 */
+.panel-achv-claim {
+  left: calc(var(--c2-2-claim-x) * var(--du));
+  top: calc(var(--c2-2-claim-y) * var(--du));
+  width: calc(var(--c2-2-claim-w) * var(--du));
+  height: calc(var(--c2-2-claim-h) * var(--du));
+}
+
+.panel-achv-lock {
+  left: calc(var(--c2-2-lock-x) * var(--du));
+  top: calc(var(--c2-2-lock-y) * var(--du));
+  width: calc(var(--c2-2-lock-w) * var(--du));
+  height: calc(var(--c2-2-lock-h) * var(--du));
+}
+
+.panel-achv-done {
+  left: calc(var(--c2-2-done-x) * var(--du));
+  top: calc(var(--c2-2-done-y) * var(--du));
+  width: calc(var(--c2-2-done-w) * var(--du));
+  height: calc(var(--c2-2-done-h) * var(--du));
+}
+
+/* 图鉴 3×3：交给 grid 排，位置从第一格的左上角算起 */
+.panel-grid-3x3 {
+  position: absolute;
+  left: calc(var(--c2-4-grid-x) * var(--du));
+  top: calc(var(--c2-4-grid-y) * var(--du));
+  display: grid;
+  grid-template-columns: repeat(3, calc(var(--c2-4-cell-w) * var(--du)));
+  grid-template-rows: repeat(3, calc(var(--c2-4-cell-h) * var(--du)));
+  gap:
+    calc(var(--c2-4-gap-y) * var(--du))
+    calc(var(--c2-4-gap-x) * var(--du));
+  background: none;
+}
+
+/* 格子外面多了一层 .coll-cell 之后，.panel-box 不再是 grid 的直接子项，
+   inline 的 span 会塌成 0 高，所以这里显式撑满这一格。 */
+.panel-grid-3x3 .panel-box {
+  position: static;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 每格 + 它下方的编号。
+   编号绝对定位在格子底边往下 --c2-4-index-cy 处，纵向居中，
+   这样它落在 53 的格间距正中，不占 grid 的排版空间。 */
+.coll-cell {
+  position: relative;
+}
+
+.coll-index {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + var(--c2-4-index-cy) * var(--du));
+  margin: 0;
+  color: var(--on-g-1);
+  font-family: var(--font-figma-number);
+  font-size: var(--c2-4-index-size);
+  font-weight: var(--fw-reg);
+  line-height: 1;
+  letter-spacing: var(--c2-4-index-tr);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+/* 图鉴生物：统一画布占比，缩略图略溢出后由圆角格裁切。 */
+.coll-cell {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--panel-radius) * var(--du));
+  background: transparent;
+  cursor: pointer;
+  isolation: isolate;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.coll-cell__surface {
+  z-index: 0;
+  transition:
+    background var(--dur-base) var(--ease),
+    box-shadow var(--dur-base) var(--ease);
+}
+
+.coll-thumb {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: calc(var(--panel-radius) * var(--du));
+  pointer-events: none;
+}
+
+.coll-thumb img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--c2-4-thumb-size) * var(--du));
+  height: calc(var(--c2-4-thumb-size) * var(--du));
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+  transition: transform var(--dur-base) var(--ease);
+  user-select: none;
+}
+
+.coll-index {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.coll-cell:hover .coll-cell__surface {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.coll-cell:hover .coll-thumb img {
+  transform: translate(-50%, -50%) scale(1.035);
+}
+
+.coll-cell.is-selected .coll-cell__surface {
+  background: rgba(255, 255, 255, 0.46);
+  box-shadow: inset 0 0 0 calc(var(--lw-emph)) rgba(255, 255, 255, 0.62);
+}
+
+.coll-cell:active .coll-thumb img {
+  transform: translate(-50%, -50%) scale(0.98);
+}
+
+.coll-cell:focus-visible {
+  outline: var(--lw-emph) solid var(--on-g-1);
+  outline-offset: calc(5 * var(--du));
+}
+
+/* 只有静态伙伴使用新增漂浮动效；01 的视频元素和播放参数均不变。 */
+.character-stage[data-motion="float"] > img {
+  animation: anim-collection-float var(--c2-4-float-dur) var(--anim-ease-breath) infinite;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+@keyframes anim-collection-float {
+  0%, 100% {
+    transform: translateY(0) rotate(-0.6deg) scale(var(--character-scale, 1));
+  }
+  50% {
+    transform: translateY(calc(-1 * var(--c2-4-float-amp) * var(--du))) rotate(0.8deg) scale(var(--character-scale, 1));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .character-stage[data-motion="float"] > img {
+    animation: none;
+  }
+}
+/* 家长端 P1 */
+.panel-p1-a,
+.panel-p1-b,
+.panel-p1-c,
+.panel-p1-d {
+  position: absolute;
+  background: var(--panel-fill);
+  border-radius: calc(var(--panel-radius) * var(--du));
+  pointer-events: none;
+}
+
+.panel-p1-a {
+  left: calc(var(--p1-a-x) * var(--du));
+  top: calc(var(--p1-a-y) * var(--du));
+  width: calc(var(--p1-a-w) * var(--du));
+  height: calc(var(--p1-a-h) * var(--du));
+}
+
+.panel-p1-b {
+  left: calc(var(--p1-b-x) * var(--du));
+  top: calc(var(--p1-b-y) * var(--du));
+  width: calc(var(--p1-b-w) * var(--du));
+  height: calc(var(--p1-b-h) * var(--du));
+}
+
+.panel-p1-c {
+  left: calc(var(--p1-c-x) * var(--du));
+  top: calc(var(--p1-c-y) * var(--du));
+  width: calc(var(--p1-c-w) * var(--du));
+  height: calc(var(--p1-c-h) * var(--du));
+}
+
+.panel-p1-d {
+  left: calc(var(--p1-d-x) * var(--du));
+  top: calc(var(--p1-d-y) * var(--du));
+  width: calc(var(--p1-d-w) * var(--du));
+  height: calc(var(--p1-d-h) * var(--du));
+}
+
+/* 家长端 P2 */
+.panel-p2-a,
+.panel-p2-b {
+  position: absolute;
+  background: var(--panel-fill);
+  border-radius: calc(var(--panel-radius) * var(--du));
+  pointer-events: none;
+}
+
+.panel-p2-a {
+  left: calc(var(--p2-a-x) * var(--du));
+  top: calc(var(--p2-a-y) * var(--du));
+  width: calc(var(--p2-a-w) * var(--du));
+  height: calc(var(--p2-a-h) * var(--du));
+}
+
+.panel-p2-b {
+  left: calc(var(--p2-b-x) * var(--du));
+  top: calc(var(--p2-b-y) * var(--du));
+  width: calc(var(--p2-b-w) * var(--du));
+  height: calc(var(--p2-b-h) * var(--du));
+}
+
+/* ------------------------------------------------------------
+   外观 · 三个圆环
+   ------------------------------------------------------------
+   直接复用 C3-1 的 .ring-slot / .ring-bubble / .c3-ring--* 与编号样式，
+   位置和尺寸全部来自 --c3-* 那批 token，不另立一套。
+   （Figma 里外观的三环与 C3-1 实测同坐标，所以「复用」是字面意义上的复用。）
+
+   [2026-11-16] 动效也一并复用：漂浮（anim-ring-float）+ 错峰入场
+   （anim-ring-in）。做法是把 C3-1 那几条规则的选型器加上 .scr-c2-3，
+   而不是复制一份参数——参数只有一套，改一处两边一起变。
+
+   只有 hover 不搬：外观页的环不可点（用 <div> 不是为了好看，是因为它
+   现在真的没有点击行为），给不可点的东西加 hover 抬升是在骗人。 */
+.scr-c2-3 .ring-slot {
+  cursor: default;
+}
+
+.scr-c2-3 .c3-ring--center {
+  left: calc(var(--c2-3-center-x) * var(--du));
+  top: calc(var(--c2-3-center-y) * var(--du));
+  width: calc(var(--c2-3-center-size) * var(--du));
+  height: calc(var(--c2-3-center-size) * var(--du));
+}
+
+/* ------------------------------------------------------------
+   竖排标签（成就页三块 + 家长端两块）
+   ------------------------------------------------------------
+   标签在框外，不属于「框内内容」，所以这一版就摆上。
+   竖排交给 writing-mode，不要用逐字换行——那样字距会散。 */
+
+/* 竖排标签：成就页的「待领取 / 待解锁 / 已完成」和家长端的
+   「三个动作 / 最近一次 / 小结」是同一个东西 —— 都贴在面板框外侧、
+   用来给框命名。所以共用一个组件，只有坐标不同。
+   writing-mode: vertical-rl 让字行往下走而字本身正立，
+   letter-spacing 在这条轴上是「字的垂直步进」。 */
+.panel-label {
+  position: absolute;
+  z-index: 4;
+  writing-mode: vertical-rl;
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-panel-label);
+  font-weight: var(--fw-reg);
+  letter-spacing: var(--tr-panel-label);
+  line-height: 1;
+  color: var(--on-g-1);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.panel-label--claim {
+  left: calc(var(--c2-2-claim-label-x) * var(--du));
+  top: calc(var(--c2-2-claim-label-y) * var(--du));
+}
+
+.panel-label--lock {
+  left: calc(var(--c2-2-lock-label-x) * var(--du));
+  top: calc(var(--c2-2-lock-label-y) * var(--du));
+}
+
+.panel-label--done {
+  left: calc(var(--c2-2-done-label-x) * var(--du));
+  top: calc(var(--c2-2-done-label-y) * var(--du));
+}
+
+.panel-label--p1-l1 { left: calc(var(--p1-l1-x) * var(--du)); top: calc(var(--p1-l1-y) * var(--du)); }
+.panel-label--p1-l2 { left: calc(var(--p1-l2-x) * var(--du)); top: calc(var(--p1-l2-y) * var(--du)); }
+.panel-label--p1-l3 { left: calc(var(--p1-l3-x) * var(--du)); top: calc(var(--p1-l3-y) * var(--du)); }
+.panel-label--p2-l1 { left: calc(var(--p2-l1-x) * var(--du)); top: calc(var(--p2-l1-y) * var(--du)); }
+.panel-label--p2-l2 { left: calc(var(--p2-l2-x) * var(--du)); top: calc(var(--p2-l2-y) * var(--du)); }
+
+/* ------------------------------------------------------------
+   家长端 · 页名
+   ------------------------------------------------------------ */
+
+.p-title {
+  position: absolute;
+  left: calc(var(--p-title-x) * var(--du));
+  top: calc(var(--p-title-cy) * var(--du));
+  z-index: 4;
+  margin: 0;
+  font-family: var(--font-figma-title);
+  font-size: var(--p-title-size);
+  font-weight: var(--fw-reg);
+  line-height: 1;
+  letter-spacing: var(--tr-c2-title);
+  white-space: nowrap;
+  transform: translateY(-50%);
+  color: var(--on-g-1);
+}
+
+/* ------------------------------------------------------------
+   家长端 · 页内标签
+   ------------------------------------------------------------ */
+
+.p-tabs {
+  position: absolute;
+  left: calc(var(--p-tab1-x) * var(--du));
+  top: calc(var(--p-tab-y) * var(--du));
+  z-index: 5;
+  margin: 0;
+  padding: 0;
+}
+
+/* 选择器要带 .scr —— 否则会被 .scr button { font: inherit }（0,1,1）压掉，
+   按钮上的字号会掉回 16px、字体退回系统默认。 */
+.scr .p-tab {
+  position: absolute;
+  top: 0;
+  width: calc(var(--p-tab-w) * var(--du));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-p-tab);
+  font-weight: var(--fw-reg);
+  line-height: var(--lh-p-tab);
+  letter-spacing: var(--tr-p-tab);
+  color: var(--p-tab-dim);
+  text-align: left;
+  white-space: normal;
+  word-break: break-all;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 两块的位置差是 140（1263 - 1123），写在类里而不是靠流式排布，
+   这样两块谁前谁后都不影响落点 */
+.p-tab:nth-child(1) {
+  left: 0;
+}
+
+.p-tab:nth-child(2) {
+  left: calc((var(--p-tab2-x) - var(--p-tab1-x)) * var(--du));
+}
+
+.p-tab.is-current {
+  cursor: default;
+  color: var(--on-g-1);
+}
+
+/* 当前页左侧的白竖条。
+   top 要减「两行」的高度：块高 = 2 × 行高，不是 1 × 行高。
+   第一版写成 (行高 - 条高)/2，条就整体上浮了 21px（截图上很明显地和
+   文字错开了半行）。Figma 里条的 y45..132 中心 88.5，正好等于两行墨迹
+   50..127 的中心。 */
+.p-tab.is-current::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--p-tab-bar-dx) * var(--du));
+  top: calc((2 * var(--lh-p-tab) - var(--p-tab-bar-h) * var(--du)) / 2);
+  width: calc(var(--p-tab-bar-w) * var(--du));
+  height: calc(var(--p-tab-bar-h) * var(--du));
+  background: var(--p-tab-bar-fill);
+}
+
+.p-tab:focus-visible {
+  outline: var(--lw-emph) solid var(--on-g-1);
+  outline-offset: var(--sp-2);
+}
+
+/* ------------------------------------------------------------
+   家长端 · 面板内信息可视化
+   面板位置、尺寸、圆角、底色和页签均沿用原稿；这里只排内部内容。
+   全部文字使用现有悦黑 / 黑体与纯白，数据单位不另换装饰字体。
+   ------------------------------------------------------------ */
+.p-panel {
+  z-index: 3;
+  overflow: hidden;
+  color: var(--on-g-1);
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-reg);
+  line-height: 1.25;
+}
+
+.p-panel *,
+.p-panel *::before,
+.p-panel *::after {
+  color: var(--on-g-1);
+  font-family: var(--font-figma-title);
+}
+
+.p-panel :where(h2, h3, p) {
+  margin: 0;
+}
+
+.p-panel :where(h2, h3) {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-reg);
+  line-height: 1.2;
+}
+
+.p-panel :where(strong, small, i) {
+  font-size: inherit;
+  font-style: normal;
+  font-weight: var(--fw-reg);
+}
+
+.p-panel__head,
+.p-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.p-panel__unit,
+.p-chart-head > span {
+  font-size: var(--fs-body);
+  white-space: nowrap;
+}
+
+.p-demo {
+  flex: none;
+  padding: var(--sp-1) var(--sp-3);
+  border: var(--lw-hair) solid var(--on-g-3);
+  border-radius: var(--r-full);
+  font-size: var(--fs-body);
+  line-height: 1;
+}
+
+/* P1 · 本周训练与每日时长 */
+.p-week {
+  padding: var(--sp-6);
+}
+
+.p-week__range {
+  margin-top: var(--sp-1) !important;
+  font-size: var(--fs-body);
+  letter-spacing: var(--tr-c2-title);
+}
+
+.p-week__stats {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: var(--sp-4);
+  margin: var(--sp-5) 0 var(--sp-6);
+}
+
+.p-stat__value {
+  font-size: var(--fs-h1);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.p-stat__value > span {
+  margin: 0 var(--sp-1);
+  font-size: var(--fs-lg);
+}
+
+.p-stat__label {
+  margin-top: var(--sp-2) !important;
+  font-size: var(--fs-body);
+}
+
+.p-day {
+  display: grid;
+  grid-template-rows: var(--fs-lg) calc(var(--p-day-track-h) * var(--du)) var(--fs-lg);
+  row-gap: var(--sp-2);
+  justify-items: center;
+  min-width: 0;
+}
+
+.p-day__value,
+.p-day__name {
+  font-size: var(--fs-body);
+  line-height: 1.25;
+}
+
+.p-day__track {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: calc(var(--p-day-track-h) * var(--du));
+  border-bottom: var(--lw-hair) solid var(--on-g-3);
+}
+
+.p-day__bar {
+  display: block;
+  width: calc(var(--p-day-bar-w) * var(--du));
+  height: var(--bar-height);
+  min-height: 0;
+  border-radius: var(--r-full) var(--r-full) 0 0;
+  background: var(--on-g-2);
+}
+
+/* P1 · 三动作累计。三条棒使用同一个 0–80 秒刻度。 */
+.p-actions {
+  padding: var(--sp-5) var(--sp-6);
+}
+
+.p-action-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.p-action {
+  display: grid;
+  grid-template-columns: calc(112 * var(--du)) 1fr;
+  grid-template-rows: var(--sp-5) calc(var(--p-action-track-h) * var(--du));
+  column-gap: var(--sp-4);
+  row-gap: var(--sp-1);
+  align-items: center;
+}
+
+.p-action__name {
+  grid-row: 1 / 3;
+  font-size: var(--fs-lg);
+  white-space: nowrap;
+}
+
+.p-action__metric {
+  font-size: var(--fs-body);
+  line-height: var(--sp-5);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.p-action__metric small {
+  margin-left: var(--sp-1);
+}
+
+.p-action__metric i {
+  display: inline-block;
+  margin: 0 var(--sp-2);
+}
+
+.p-action__track {
+  grid-column: 2;
+  display: block;
+  height: calc(var(--p-action-track-h) * var(--du));
+  overflow: hidden;
+  border-radius: var(--r-full);
+  background: var(--glow-mid);
+}
+
+.p-action__bar {
+  display: block;
+  width: var(--bar-width);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--on-g-1);
+}
+
+/* P1 · 最近一次 */
+.p-recent,
+.p-summary {
+  padding: var(--sp-5);
+}
+
+.p-recent__level {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4) !important;
+  font-size: var(--fs-body);
+  white-space: nowrap;
+}
+
+.p-recent__time {
+  margin-top: var(--sp-5);
+}
+
+.p-recent__time > span {
+  display: block;
+  font-size: var(--fs-body);
+}
+
+.p-recent__time > strong {
+  display: block;
+  margin-top: var(--sp-1);
+  font-size: var(--fs-h1);
+  line-height: 1;
+}
+
+.p-recent__status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4) !important;
+  font-size: var(--fs-body);
+}
+
+.p-recent__status > i {
+  display: block;
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--r-full);
+  background: var(--on-g-1);
+}
+
+/* P1 · 小结只说明是否符合既定训练安排，不推导疗效。 */
+.p-summary__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  white-space: nowrap;
+}
+
+.p-summary__row > span {
+  font-size: var(--fs-body);
+}
+
+.p-summary__row > strong {
+  font-size: var(--fs-lg);
+}
+
+.p-summary__result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-5) !important;
+  padding-top: var(--sp-3);
+  border-top: var(--lw-hair) solid var(--on-g-3);
+  font-size: var(--fs-body);
+}
+
+.p-summary__result > i {
+  display: grid;
+  place-items: center;
+  width: var(--sp-5);
+  height: var(--sp-5);
+  border: var(--lw-hair) solid var(--on-g-1);
+  border-radius: var(--r-full);
+  font-size: var(--fs-body);
+  line-height: 1;
+}
+
+/* P2 · 四周趋势。柱高只表示总时长，次数单独标在日期下。 */
+.p-trend {
+  padding: var(--sp-4) var(--sp-6);
+}
+
+.p-trend__chart {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: var(--sp-1);
+}
+
+.p-trend__week {
+  display: grid;
+  grid-template-rows: var(--fs-lg) calc(var(--p-week-track-h) * var(--du)) var(--fs-lg) var(--fs-lg);
+  row-gap: var(--sp-1);
+  justify-items: center;
+  min-width: 0;
+}
+
+.p-trend__value,
+.p-trend__date,
+.p-trend__count {
+  font-size: var(--fs-body);
+  line-height: 1.25;
+}
+
+.p-trend__track {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: calc(100% - var(--sp-7));
+  height: calc(var(--p-week-track-h) * var(--du));
+  border-bottom: var(--lw-hair) solid var(--on-g-3);
+}
+
+.p-trend__bar {
+  display: block;
+  width: calc(var(--p-week-bar-w) * var(--du));
+  height: var(--bar-height);
+  border-radius: var(--r-full) var(--r-full) 0 0;
+  background: var(--on-g-2);
+}
+
+.p-trend__week.is-current .p-trend__bar {
+  background: var(--on-g-1);
+}
+
+/* P2 · 单次明细。动作列统一为“次数 / 累计秒数”，不换算能力分。 */
+.p-history {
+  padding: var(--sp-4) var(--sp-6);
+}
+
+.p-history table {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--on-g-1);
+  font-family: var(--font-figma-title);
+  font-size: var(--fs-body);
+  text-align: center;
+}
+
+.p-history__col-date { width: 13%; }
+.p-history__col-level { width: 22%; }
+.p-history__col-time { width: 11%; }
+.p-history__col-status { width: 11%; }
+
+.p-history thead tr {
+  height: calc(42 * var(--du));
+}
+
+.p-history tbody tr {
+  height: calc(46 * var(--du));
+}
+
+.p-history tbody tr:not(:last-child) {
+  border-bottom: var(--lw-hair) solid var(--glow-mid);
+}
+
+.p-history thead tr {
+  border-bottom: var(--lw-hair) solid var(--on-g-3);
+}
+
+.p-history th,
+.p-history td {
+  overflow: hidden;
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-reg);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p-history th:first-child,
+.p-history td:first-child,
+.p-history__level {
+  text-align: left;
+}
+
+.p-history th > span,
+.p-history td:first-child > span {
+  opacity: 0.74;
+}
+
+.p-history td:first-child > span {
+  margin-left: var(--sp-2);
+}
+
+.p-history td > i {
+  display: inline-block;
+  margin: 0 var(--sp-3);
+  opacity: 0.74;
+}
+
+.p-week-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  column-gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scr-p1 .p-panel {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.sea-result-card__level {
+  position: absolute;
+  left: 50%;
+  top: calc(224 * var(--du));
+  margin: 0;
+  color: var(--on-g-2);
+  font-family: var(--font-figma-title);
+  font-size: calc(24 * var(--du));
+  letter-spacing: .06em;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.sea-result-card__actions {
+  position: absolute;
+  left: 50%;
+  top: calc(278 * var(--du));
+  display: flex;
+  gap: calc(38 * var(--du));
+  transform: translateX(-50%);
+  color: var(--on-g-2);
+  font-size: calc(18 * var(--du));
+  white-space: nowrap;
+}
+.sea-result-card__actions span { display: inline-flex; align-items: center; gap: calc(8 * var(--du)); }
+.sea-result-card__actions i {
+  display: inline-grid;
+  place-items: center;
+  width: calc(20 * var(--du));
+  height: calc(20 * var(--du));
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: calc(12 * var(--du));
+  font-style: normal;
+}
+.sea-result-card__time {
+  position: absolute;
+  left: 50%;
+  top: calc(320 * var(--du));
+  margin: 0;
+  color: var(--on-g-2);
+  font-size: calc(15 * var(--du));
+  opacity: .76;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.sea-result-card__level { top: calc(215 * var(--du)); }
+.sea-result-card__actions { top: calc(282 * var(--du)); }
+.sea-result-card__time { top: calc(252 * var(--du)); }
+
+.c3-ring-preview { width: 82%; height: 82%; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: inset 0 0 calc(18 * var(--du)) rgba(255,255,255,.14); }
+.c3-ring-preview img { border-radius: 50%; }
+.c3-ring[data-state="locked"] .c3-ring-preview { opacity: .48; }
+.c3-ring[data-state="current"] .c3-ring-preview,
+.c3-ring[data-state="done"] .c3-ring-preview { opacity: 1; }
+
+.sea-result-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.sea-result-backdrop img { width: 100%; height: 100%; object-fit: cover; }
+.sea-result-backdrop::after { content: ""; position: absolute; inset: 0; background: rgba(25, 63, 102, .26); }
+
+/* Settings, profiles, levels and achievements use the same translucent surfaces. */
+.settings-panel { position: absolute; padding: calc(26 * var(--du)); border: 1px solid rgba(255,255,255,.22); border-radius: calc(var(--panel-radius) * var(--du)); background: var(--panel-fill); color: var(--on-g-1); font-family: var(--font-figma-label); }
+.settings-panel h2 { margin: 0 0 calc(16 * var(--du)); font-family: var(--font-figma-title); font-size: calc(25 * var(--du)); font-weight: 400; }
+.settings-overview { left: calc(600 * var(--du)); top: calc(150 * var(--du)); width: calc(340 * var(--du)); height: calc(210 * var(--du)); }
+.settings-options { left: calc(600 * var(--du)); top: calc(390 * var(--du)); width: calc(340 * var(--du)); height: calc(300 * var(--du)); }
+.settings-profiles { left: calc(990 * var(--du)); top: calc(150 * var(--du)); width: calc(410 * var(--du)); height: calc(540 * var(--du)); }
+.settings-kicker { display: block; font-size: calc(14 * var(--du)); opacity: .75; letter-spacing: .12em; }
+.settings-level { display: block; margin-top: calc(4 * var(--du)); font-family: var(--font-figma-number); font-size: calc(48 * var(--du)); font-weight: 400; }
+.settings-xp { position: absolute; right: calc(26 * var(--du)); top: calc(65 * var(--du)); font-size: calc(20 * var(--du)); }
+.settings-progress { width: calc(160 * var(--du)); height: calc(3 * var(--du)); margin-top: calc(14 * var(--du)); border: 0; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.24); box-shadow: none; }
+.settings-progress span { display: block; height: 100%; border-radius: inherit; background: #fff; box-shadow: none; }
+.settings-overview p { margin: calc(10 * var(--du)) 0 0; font-size: calc(14 * var(--du)); }
+.settings-muted { color: rgba(255,255,255,.7); font-size: calc(13 * var(--du)); line-height: 1.55; }
+.settings-volume { display: flex; flex-direction: column; gap: calc(16 * var(--du)); font-size: calc(16 * var(--du)); }
+.settings-volume input { width: calc(180 * var(--du)); height: calc(3 * var(--du)); margin: calc(8 * var(--du)) 0; appearance: none; -webkit-appearance: none; border: 0; border-radius: 999px; outline: 0; background: linear-gradient(to right, #fff 0 var(--volume-percent, 60%), rgba(255,255,255,.24) var(--volume-percent, 60%) 100%); cursor: pointer; }
+.settings-action { margin-top: calc(20 * var(--du)); padding: calc(10 * var(--du)) calc(16 * var(--du)); border: 1px solid rgba(255,255,255,.32); border-radius: 999px; background: rgba(255,255,255,.1); color: var(--on-g-1); font: inherit; font-size: calc(14 * var(--du)); cursor: pointer; }
+.settings-reset { color: #fff; opacity: .82; }
+.profile-list { display: flex; flex-direction: column; gap: calc(10 * var(--du)); margin-top: calc(18 * var(--du)); }
+.profile-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: calc(10 * var(--du)); padding: calc(12 * var(--du)) calc(14 * var(--du)); border: 1px solid rgba(255,255,255,.18); border-radius: calc(16 * var(--du)); background: rgba(255,255,255,.06); color: var(--on-g-1); text-align: left; cursor: pointer; }
+.profile-row span { font-size: calc(16 * var(--du)); }
+.profile-row small { font-size: calc(12 * var(--du)); opacity: .68; }
+.profile-row i { font-size: calc(12 * var(--du)); font-style: normal; opacity: .8; }
+.profile-row.is-current { border-color: rgba(220,255,245,.65); background: rgba(255,255,255,.14); }
+.profile-row:disabled { cursor: default; }
+.profile-row.is-empty { display: flex; justify-content: center; gap: calc(12 * var(--du)); border-style: dashed; text-align: center; }
+.achievement-summary { position: absolute; left: calc(700 * var(--du)); top: calc(102 * var(--du)); display: flex; align-items: baseline; gap: calc(18 * var(--du)); color: var(--on-g-1); font-family: var(--font-figma-number); font-size: calc(30 * var(--du)); }
+.achievement-summary span { font-family: var(--font-figma-label); font-size: calc(16 * var(--du)); opacity: .76; }
+.achievement-scroll { position: absolute; display: flex; flex-direction: column; gap: calc(10 * var(--du)); overflow-y: auto; scrollbar-width: thin; color: var(--on-g-1); font-family: var(--font-figma-label); }
+.achievement-scroll--claim { left: calc(720 * var(--du)); top: calc(166 * var(--du)); width: calc(257 * var(--du)); height: calc(365 * var(--du)); }
+.achievement-scroll--lock { left: calc(1068 * var(--du)); top: calc(220 * var(--du)); width: calc(312 * var(--du)); height: calc(455 * var(--du)); }
+.achievement-scroll--done { left: calc(720 * var(--du)); top: calc(620 * var(--du)); width: calc(257 * var(--du)); height: calc(158 * var(--du)); }
+.achievement-item { display: grid; grid-template-columns: calc(42 * var(--du)) 1fr auto; align-items: center; gap: calc(8 * var(--du)); min-height: calc(48 * var(--du)); }
+.achievement-item img { width: calc(42 * var(--du)); height: calc(42 * var(--du)); object-fit: contain; }
+.achievement-item strong { display: block; font-size: calc(14 * var(--du)); font-weight: 400; }
+.achievement-item span { display: block; margin-top: calc(3 * var(--du)); font-size: calc(11 * var(--du)); opacity: .7; }
+.achievement-item button { padding: calc(5 * var(--du)) calc(9 * var(--du)); border: 1px solid rgba(255,255,255,.28); border-radius: 999px; background: rgba(255,255,255,.1); color: var(--on-g-1); font: inherit; font-size: calc(11 * var(--du)); cursor: pointer; }
+.achievement-item button:disabled { opacity: .45; cursor: default; }
+.achievement-item--text { grid-template-columns: 1fr auto; }
+.achievement-item--text small { font-size: calc(12 * var(--du)); opacity: .65; }
+.achievement-item.is-locked { opacity: .68; }
+.achievement-done-line { display: flex; justify-content: space-between; gap: calc(10 * var(--du)); font-size: calc(13 * var(--du)); }
+.achievement-done-line small { font-size: calc(11 * var(--du)); opacity: .55; }
+.achievement-empty { margin: calc(12 * var(--du)) 0; color: rgba(255,255,255,.62); font-size: calc(13 * var(--du)); line-height: 1.6; }
+
+.intro-player { position: absolute; inset: 0; display: grid; place-items: center; background: #102d58; }
+.intro-video { width: 100%; height: 100%; object-fit: contain; background: #102d58; }
+.intro-skip { position: absolute; right: calc(50 * var(--du)); bottom: calc(45 * var(--du)); padding: calc(10 * var(--du)) calc(22 * var(--du)); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; background: rgba(255,255,255,.12); color: #fff; font: inherit; cursor: pointer; }
+
+.settings-panel { font-size: calc(18 * var(--du)); overflow-y: auto; }
+.settings-panel h2 { position: absolute; left: calc(-48 * var(--du)); top: 0; margin: 0; color: var(--on-g-1); font-family: var(--font-figma-title); font-size: calc(30 * var(--du)); font-weight: 400; line-height: 1.05; letter-spacing: .08em; writing-mode: vertical-rl; }
+.settings-kicker { font-size: calc(18 * var(--du)); }
+.settings-muted { font-size: calc(16 * var(--du)); }
+.settings-overview p { font-size: calc(17 * var(--du)); }
+.settings-volume { font-size: calc(18 * var(--du)); }
+.settings-action { font-size: calc(16 * var(--du)); }
+.profile-row span { font-size: calc(20 * var(--du)); }
+.profile-row small { font-size: calc(15 * var(--du)); }
+.profile-row i { font-size: calc(14 * var(--du)); }
+.achievement-item strong { font-size: calc(18 * var(--du)); }
+.achievement-item span { font-size: calc(14 * var(--du)); }
+.achievement-item button { font-size: calc(14 * var(--du)); }
+.achievement-item--text small { font-size: calc(14 * var(--du)); }
+.achievement-done-line { font-size: calc(16 * var(--du)); }
+.achievement-done-line small { font-size: calc(13 * var(--du)); }
+.achievement-empty { font-size: calc(16 * var(--du)); }
+.achievement-compass { position: absolute; left: calc(1240 * var(--du)); top: calc(65 * var(--du)); width: calc(130 * var(--du)); height: calc(130 * var(--du)); object-fit: contain; opacity: .42; pointer-events: none; }
+
+.ring-slot.is-locked { opacity: .34; filter: saturate(.45); cursor: default; }
+.ring-slot.is-locked .ring-preview { opacity: .55; }
+
+.character-stage video,
+.character-stage img { transform: scale(var(--character-scale, 1)); transform-origin: center; }
+.calibration-action__done { position: absolute; right: calc(16 * var(--du)); top: calc(14 * var(--du)); display: grid; place-items: center; width: calc(38 * var(--du)); height: calc(38 * var(--du)); border: calc(2 * var(--du)) solid rgba(255,255,255,.8); border-radius: 50%; color: #fff; font-size: calc(22 * var(--du)); opacity: 0; transform: scale(.65); transition: opacity .18s, transform .18s; pointer-events: none; }
+.calibration-action[data-tried="true"] .calibration-action__done { opacity: 1; transform: scale(1); }
+.c3-ring[data-state="locked"] .c3-ring-preview { opacity: .7; }
+.c3-ring[data-state="locked"] .ring-bubble { opacity: .68; }
+
+.ring-slot.is-locked { opacity: .6; filter: saturate(.55); }
+.ring-slot.is-locked .ring-preview { opacity: .72; }
+/* Quiet white controls and scrollbars for the main-interface settings/achievement pages. */
+.settings-panel,
+.achievement-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.72) transparent; }
+.settings-panel::-webkit-scrollbar,
+.achievement-scroll::-webkit-scrollbar { width: calc(4 * var(--du)); height: calc(4 * var(--du)); }
+.settings-panel::-webkit-scrollbar-track,
+.achievement-scroll::-webkit-scrollbar-track { background: transparent; }
+.settings-panel::-webkit-scrollbar-thumb,
+.achievement-scroll::-webkit-scrollbar-thumb { border: 0; border-radius: 999px; background: rgba(255,255,255,.72); }
+.settings-panel::-webkit-scrollbar-button,
+.achievement-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+.settings-volume input::-webkit-slider-runnable-track { height: calc(3 * var(--du)); border: 0; border-radius: 999px; background: transparent; }
+.settings-volume input::-webkit-slider-thumb { width: calc(10 * var(--du)); height: calc(10 * var(--du)); margin-top: calc(-3.5 * var(--du)); appearance: none; -webkit-appearance: none; border: 0; border-radius: 50%; background: #fff; box-shadow: none; }
+.settings-volume input::-moz-range-track { height: calc(3 * var(--du)); border: 0; border-radius: 999px; background: rgba(255,255,255,.24); }
+.settings-volume input::-moz-range-progress { height: calc(3 * var(--du)); border-radius: 999px; background: #fff; }
+.settings-volume input::-moz-range-thumb { width: calc(10 * var(--du)); height: calc(10 * var(--du)); border: 0; border-radius: 50%; background: #fff; box-shadow: none; }
+/* ------------------------------------------------------------
+   Final, restrained interface motion. New content panels previously
+   appeared instantly while older screens already had soft entrances.
+   ------------------------------------------------------------ */
+@keyframes anim-panel-arrive {
+  from { opacity: 0; transform: translateY(calc(8 * var(--du))); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes anim-overlay-arrive {
+  from { opacity: 0; transform: translateY(calc(7 * var(--du))) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes anim-claimed-line {
+  from { opacity: 0; transform: translateY(calc(-5 * var(--du))); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.scr-c2-1 .settings-panel,
+.scr-c2-2 .achievement-summary,
+.scr-c2-2 .achievement-scroll,
+.scr-c2-2 .achievement-compass {
+  animation: anim-panel-arrive 420ms var(--anim-ease-soft) backwards;
+}
+.scr-c2-1 .settings-overview { animation-delay: 70ms; }
+.scr-c2-1 .settings-options { animation-delay: 140ms; }
+.scr-c2-1 .settings-profiles { animation-delay: 210ms; }
+.scr-c2-2 .achievement-summary { animation-delay: 40ms; }
+.scr-c2-2 .achievement-scroll--claim { animation-delay: 110ms; }
+.scr-c2-2 .achievement-scroll--done { animation-delay: 180ms; }
+.scr-c2-2 .achievement-scroll--lock,
+.scr-c2-2 .achievement-compass { animation-delay: 240ms; }
+.scr-c2-4 .coll-cell {
+  animation: anim-panel-arrive 360ms var(--anim-ease-soft) backwards;
+}
+.scr-c2-4 .coll-cell:nth-child(1) { animation-delay: 50ms; }
+.scr-c2-4 .coll-cell:nth-child(2) { animation-delay: 85ms; }
+.scr-c2-4 .coll-cell:nth-child(3) { animation-delay: 120ms; }
+.scr-c2-4 .coll-cell:nth-child(4) { animation-delay: 155ms; }
+.scr-c2-4 .coll-cell:nth-child(5) { animation-delay: 190ms; }
+.scr-c2-4 .coll-cell:nth-child(6) { animation-delay: 225ms; }
+.scr-c2-4 .coll-cell:nth-child(7) { animation-delay: 260ms; }
+.scr-c2-4 .coll-cell:nth-child(8) { animation-delay: 295ms; }
+.scr-c2-4 .coll-cell:nth-child(9) { animation-delay: 330ms; }
+.scr-p1 .panel-p1-a,
+.scr-p1 .panel-p1-b,
+.scr-p1 .panel-p1-c,
+.scr-p1 .panel-p1-d,
+.scr-p1 .panel-p2-a,
+.scr-p1 .panel-p2-b {
+  animation: anim-panel-arrive 400ms var(--anim-ease-soft) 120ms backwards;
+}
+.overlay-card.calibration-card,
+.overlay-card.sea-result-card {
+  animation: anim-overlay-arrive 300ms var(--anim-ease-soft) both;
+}
+.achievement-done-line.is-claimed-now {
+  animation: anim-claimed-line 380ms var(--anim-ease-soft) both;
+}
+.settings-action,
+.achievement-item button,
+.profile-row {
+  transition: transform 160ms var(--anim-ease-soft), background-color 160ms linear, border-color 160ms linear;
+}
+.settings-action:hover,
+.achievement-item button:not(:disabled):hover,
+.profile-row:not(:disabled):hover { transform: translateY(calc(-1 * var(--du))); background-color: rgba(255,255,255,.16); }
+.settings-action:active,
+.achievement-item button:not(:disabled):active,
+.profile-row:not(:disabled):active { transform: translateY(0) scale(.985); }
+@media (prefers-reduced-motion: reduce) {
+  .scr-c2-1 .settings-panel,
+  .scr-c2-2 .achievement-summary,
+  .scr-c2-2 .achievement-scroll,
+  .scr-c2-2 .achievement-compass,
+  .scr-c2-4 .coll-cell,
+  .scr-p1 .panel-p1-a,
+  .scr-p1 .panel-p1-b,
+  .scr-p1 .panel-p1-c,
+  .scr-p1 .panel-p1-d,
+  .scr-p1 .panel-p2-a,
+  .scr-p1 .panel-p2-b,
+  .overlay-card.calibration-card,
+  .overlay-card.sea-result-card,
+  .achievement-done-line.is-claimed-now { animation: none; }
+  .settings-action,
+  .achievement-item button,
+  .profile-row { transition: none; }
+}

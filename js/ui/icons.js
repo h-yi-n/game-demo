@@ -56,6 +56,21 @@
       <path d="M9.5 4.4v15.2" vector-effect="non-scaling-stroke" />
       <path d="M12.5 11.8h2.6" vector-effect="non-scaling-stroke" />
     `),
+    /* [确认] 2026-11-16 补：主界面左下图标组新增的"成就"入口。
+       按现有那套规则画的（24×24、只描边、不加填充）。
+       2026-11-16 用户确认就用这一版，不再等 Figma 导出。 */
+    achievement: icon(`
+      <circle
+        cx="12"
+        cy="9.6"
+        r="5.4"
+        vector-effect="non-scaling-stroke"
+      />
+      <path
+        d="M8.7 14.1 6.9 20.5 12 18.1 17.1 20.5 15.3 14.1"
+        vector-effect="non-scaling-stroke"
+      />
+    `),
     viewSwitch: icon(`
       <circle
         cx="8.6"

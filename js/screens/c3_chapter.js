@@ -1,8 +1,6 @@
 (function () {
   "use strict";
 
-  const C3_SELECTED_SEA_KEY = "oral-motor-c2-selected-sea-v1";
-
   let leaving = false;
 
   function teardown() {
@@ -13,6 +11,7 @@
   function mount() {
     teardown();
     document.addEventListener("click", onLevelClick, false);
+    window.SeaUI.bindRingFocus(document.querySelector(".scr-c3"));
   }
 
   function leave(ring, seaIndex, levelIndex) {
@@ -51,31 +50,32 @@
     if (!ring || ring.disabled) return;
     const seaIndex = Number(ring.dataset.c3Sea);
     const levelIndex = Number(ring.dataset.c3Level);
-    if (!Number.isInteger(seaIndex) || seaIndex < 0 || seaIndex > 2) return;
-    if (!Number.isInteger(levelIndex) || levelIndex < 0 || levelIndex > 2) {
+    if (
+      !Number.isInteger(seaIndex) ||
+      seaIndex < 0 ||
+      seaIndex >= window.CONFIG.PLAYABLE_SEAS
+    ) {
+      return;
+    }
+    if (
+      !Number.isInteger(levelIndex) ||
+      levelIndex < 0 ||
+      levelIndex >= window.App.LEVELS.length
+    ) {
       return;
     }
     leave(ring, seaIndex, levelIndex);
   }
 
-  window.Screens.c3 = {
+  const chapterScreen = {
     render() {
       const App = window.App;
       const context = App.getScreenContext();
-      const savedRaw = window.localStorage.getItem(C3_SELECTED_SEA_KEY);
-      const savedSea = Number(savedRaw);
-      const relayedSea = Number.isInteger(window.C2SelectedSea)
-        ? window.C2SelectedSea
-        : savedRaw !== null &&
-            Number.isInteger(savedSea) &&
-            savedSea >= 0 &&
-            savedSea < 3
-          ? savedSea
-          : App.getSelectedSea();
       const seaIndex = Number.isInteger(context.seaIndex)
         ? context.seaIndex
-        : relayedSea;
+        : App.getSelectedSea();
       const sea = App.SEAS[seaIndex];
+      const seaCode = window.SeaUI.seaCode(seaIndex);
 
       const ringClasses = [
         "c3-ring--center",
@@ -92,6 +92,9 @@
         const unlocked = App.isLevelUnlocked(seaIndex, levelIndex);
         const cleared = App.isLevelCleared(seaIndex, levelIndex);
         const number = String(levelIndex + 1).padStart(2, "0");
+        const visualLevelId = seaIndex * 3 + levelIndex + 1;
+        const levelConfig = (window.GameLevelConfigs || []).find(function (item) { return item.sea === seaIndex && item.level === levelIndex; });
+        const levelTitle = levelConfig ? levelConfig.title : "第 " + (levelIndex + 1) + " 关";
         const state = !unlocked ? "locked" : cleared ? "done" : "current";
         return `
           <button
@@ -101,9 +104,10 @@
             data-c3-sea="${seaIndex}"
             data-c3-level="${levelIndex}"
             ${unlocked ? "" : "disabled"}
-            aria-label="第 ${levelIndex + 1} 关"
+            aria-label="第 ${levelIndex + 1} 关 · ${App.escapeHtml(levelTitle)}"
           >
             <span class="ring-float">
+              <span class="ring-preview c3-ring-preview" aria-hidden="true"><img src="assets/levels/level-0${visualLevelId}/environment/preview.png" alt="" draggable="false"></span>
               <span class="ring-bubble" aria-hidden="true"></span>
               <span class="ring-index c3-index ${indexClasses[levelIndex]}">${number}</span>
             </span>
@@ -115,15 +119,14 @@
          不能直接在这里 addEventListener（那时候节点还没进文档） */
       window.requestAnimationFrame(mount);
 
+      /* 整个海域的选择页、游玩页、结算浮窗共用这一套底图。
+         后续单关底图统一在 js/ui/sea.js 里接入。 */
+      const bg = window.SeaUI.background(seaIndex);
+
       return `
-        <article class="scr scr-c3" aria-label="C3 ${App.escapeHtml(sea.name)} · 章内三关">
-          <h1 class="visually-hidden">C3 ${App.escapeHtml(sea.name)} · 章内三关</h1>
-          <img
-            class="scene-bg c3-bg"
-            src="assets/海域${seaIndex + 1}底图.png"
-            alt=""
-            draggable="false"
-          />
+        <article class="scr scr-c3" data-screen="${seaCode}" aria-label="${seaCode} ${App.escapeHtml(sea.name)} · 章内三关">
+          <h1 class="visually-hidden">${seaCode} ${App.escapeHtml(sea.name)} · 章内三关</h1>
+          ${bg}
           ${levelRings}
           <button
             class="figma-back app-back"
@@ -137,4 +140,8 @@
       `;
     },
   };
+
+  for (let seaIndex = 0; seaIndex < window.CONFIG.PLAYABLE_SEAS; seaIndex += 1) {
+    window.Screens[window.SeaUI.seaScreenId(seaIndex)] = chapterScreen;
+  }
 })();

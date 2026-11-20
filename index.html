@@ -85,22 +85,78 @@
   </head>
   <body>
     <main class="stage">
+      <!-- 底图视频常驻层，一族一条：
+             --c2 = 主界面 + 设置/成就/外观/图鉴
+             --p  = 家长端 P1 本周概览 + P2 历史记录
+           放在 screen-root 外面是为了跨屏不重建：一族内部来回跳时，
+           背景是同一条流，不重播、不回到第 0 帧。
+           两条都默认不 autoplay —— 由 js/app.js 在真正进入这一族时才 play()，
+           离开就 pause()，同时把 .stage 的 data-bg 切走让对应那条淡出。 -->
+      <div class="scene-bg-layer scene-bg-layer--c2" id="scene-bg-layer" aria-hidden="true">
+        <video
+          class="scene-bg c2-bg"
+          src="assets/video/主界面底图动画.mp4"
+          poster="assets/video/主界面底图动画-封面.jpg"
+          preload="none"
+          muted
+          loop
+          playsinline
+        ></video>
+      </div>
+      <!-- 家长端（P1 本周概览 / P2 历史记录）共用这一条。
+           和 C2 那条同理：两页之间切只切 opacity，视频不重播、不回第 0 帧。
+           尺寸走 --p1-bg-*（1600×900，左右各溢出 80，16:9 无变形铺满）。 -->
+      <div class="scene-bg-layer scene-bg-layer--p" id="p-bg-layer" aria-hidden="true">
+        <video
+          class="scene-bg p1-bg"
+          src="assets/video/家长端底图动画.mp4"
+          poster="assets/video/家长端底图动画-封面.jpg"
+          preload="none"
+          muted
+          loop
+          playsinline
+        ></video>
+      </div>
+      <!-- C2 家族的常驻角色层。切到设置 / 成就 / 图鉴时元素不重建，
+           视频继续播放；离开这一族才暂停。图鉴切换角色也只更换这一个源。 -->
+      <div class="character-stage" id="character-stage" data-visible="false" aria-hidden="true">
+        <video preload="none" muted loop playsinline></video>
+        <img hidden alt="" draggable="false">
+      </div>
+      <div class="bgm-layer" aria-hidden="true">
+        <audio data-slot="a" preload="none" loop></audio>
+        <audio data-slot="b" preload="none" loop></audio>
+      </div>
+
       <div id="screen-root" class="screen-root" aria-live="polite"></div>
       <div id="overlay-root" class="overlay-root"></div>
     </main>
 
+    <link rel="stylesheet" href="css/level-01.css">
+
+    <script src="js/config.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/ui/audio.js"></script>
+    <script src="js/ui/character.js"></script>
+    <script src="js/ui/sea.js"></script>
+    <script src="js/ui/input.js"></script>
+    <script src="js/levels/configs.js"></script>
+    <script src="js/levels/markup.js"></script>
     <script src="js/app.js"></script>
     <script src="js/ui/icons.js"></script>
+    <script src="js/ui/scene.js"></script>
     <script src="js/screens/c1_splash.js"></script>
     <script src="js/screens/c2_home.js"></script>
     <script src="js/screens/c3_chapter.js"></script>
+    <script src="js/level-01.js"></script>
     <script src="js/screens/c4_play.js"></script>
     <script src="js/screens/c5_result.js"></script>
-    <script src="js/screens/c6_level.js"></script>
-    <script src="js/screens/c7_achievements.js"></script>
-    <script src="js/screens/c8_skins.js"></script>
-    <script src="js/screens/c9_collection.js"></script>
-    <script src="js/screens/c10_settings.js"></script>
+    <script src="js/screens/intro.js"></script>
+    <script src="js/screens/c2-2_achievements.js"></script>
+    <script src="js/screens/c2-3_skins.js"></script>
+    <script src="js/screens/c2-4_collection.js"></script>
+    <script src="js/screens/c2-1_settings.js"></script>
+    <script src="js/screens/parent_data.js"></script>
     <script src="js/screens/p1_overview.js"></script>
     <script src="js/screens/p2_plan.js"></script>
     <script src="js/screens/p3_records.js"></script>

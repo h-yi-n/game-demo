@@ -1,42 +1,5 @@
 (function () {
-  var SEA_NAMES = ["珊瑚森林", "海流峡谷", "水晶洞穴"];
-  var SELECTED_SEA_KEY = "oral-motor-c2-selected-sea-v1";
   var leaving = false;
-
-  function readSelectedSea(defaultSea) {
-    if (Number.isInteger(window.C2SelectedSea)) {
-      return window.C2SelectedSea;
-    }
-    try {
-      var raw = window.localStorage.getItem(SELECTED_SEA_KEY);
-      var saved = Number(raw);
-      if (raw !== null && Number.isInteger(saved) && saved >= 0 && saved < 3) {
-        return saved;
-      }
-    } catch (error) {
-      // 本地存储不可用时继续使用 App 的选中海域。
-    }
-    return defaultSea;
-  }
-
-  /* 原样保留：捕获阶段写 localStorage */
-  document.addEventListener(
-    "click",
-    function (event) {
-      var ring = event.target.closest(".c2-ring[data-sea-index]");
-      if (!ring) return;
-      var seaIndex = Number(ring.dataset.seaIndex);
-      if (!Number.isInteger(seaIndex) || seaIndex < 0 || seaIndex > 2) return;
-      if (!window.App.isSeaUnlocked(seaIndex)) return;
-      window.C2SelectedSea = seaIndex;
-      try {
-        window.localStorage.setItem(SELECTED_SEA_KEY, String(seaIndex));
-      } catch (error) {
-        // 当前会话仍可通过 window.C2SelectedSea 记住选择。
-      }
-    },
-    true,
-  );
 
   function teardown() {
     document.removeEventListener("click", onRingClick, false);
@@ -46,7 +9,7 @@
   function mount() {
     teardown();
     document.addEventListener("click", onRingClick, false);
-    bindTitlePreview(readSelectedSea(window.App.getSelectedSea()));
+    bindTitlePreview(window.App.getSelectedSea());
   }
 
   function leave(ring, seaIndex) {
@@ -76,7 +39,13 @@
       event.target.closest && event.target.closest(".c2-ring[data-sea-index]");
     if (!ring) return;
     var seaIndex = Number(ring.dataset.seaIndex);
-    if (!Number.isInteger(seaIndex) || seaIndex < 0 || seaIndex > 2) return;
+    if (
+      !Number.isInteger(seaIndex) ||
+      seaIndex < 0 ||
+      seaIndex >= window.CONFIG.PLAYABLE_SEAS
+    ) {
+      return;
+    }
     if (!window.App.isSeaUnlocked(seaIndex)) return;
     leave(ring, seaIndex);
   }
@@ -98,7 +67,8 @@
 
     function paint(index) {
       hero.textContent = String(index + 1).padStart(2, "0");
-      nameEl.textContent = SEA_NAMES[index];
+      var sea = window.App.SEAS[index];
+      nameEl.textContent = (sea && sea.name) || "";
       title.dataset.sea = String(index);
     }
 
@@ -137,7 +107,13 @@
     var rings = document.querySelectorAll(".scr-c2 .c2-ring[data-sea-index]");
     rings.forEach(function (ring) {
       var index = Number(ring.dataset.seaIndex);
-      if (!Number.isInteger(index) || index < 0 || index > 2) return;
+      if (
+        !Number.isInteger(index) ||
+        index < 0 ||
+        index >= window.CONFIG.PLAYABLE_SEAS
+      ) {
+        return;
+      }
       ring.addEventListener("mouseenter", function () {
         swapTo(index);
       });
@@ -152,14 +128,13 @@
   window.Screens.c2 = {
     render() {
       var App = window.App;
-      var context = App.getScreenContext();
-      var allComplete = context.allComplete === true;
-      var selectedSea = readSelectedSea(App.getSelectedSea());
-      var selectedLabel = SEA_NAMES[selectedSea] || App.SEAS[selectedSea].name;
+      var selectedSea = App.getSelectedSea();
+      var selectedLabel = App.SEAS[selectedSea].name;
       var selectedNumber = String(selectedSea + 1).padStart(2, "0");
 
       function renderSeaRing(seaIndex, ringClass, indexClass) {
         var current = selectedSea === seaIndex;
+        var unlocked = window.App.isSeaUnlocked(seaIndex);
         var number = String(seaIndex + 1).padStart(2, "0");
         var preview = `
           <span class="ring-preview c2-ring-preview">
@@ -168,8 +143,9 @@
         `;
         return `
           <button
-            class="ring-slot c2-ring ${ringClass}${current ? " is-current" : ""}"
+            class="ring-slot c2-ring ${ringClass}${current ? " is-current" : ""}${!unlocked ? " is-locked" : ""}"
             type="button"
+            ${!unlocked ? "disabled" : ""}
             data-sea-index="${seaIndex}"
             data-ring="sea-${seaIndex + 1}"
             aria-label="海域 ${seaIndex + 1}，前往章内三关"
@@ -186,25 +162,37 @@
         `;
       }
 
-      var mainRings = [
-        ["c2-ring--one", "c2-ring-index--one", 0],
-        ["c2-ring--two", "c2-ring-index--two", 1],
-        ["c2-ring--three", "c2-ring-index--three", 2],
-      ]
-        .map(function ([ringClass, indexClass, seaIndex]) {
-          return renderSeaRing(seaIndex, ringClass, indexClass);
+      var RING_WORDS = ["one", "two", "three"];
+      var ringSlots = [];
+      for (
+        var ringIndex = 0;
+        ringIndex < window.CONFIG.PLAYABLE_SEAS;
+        ringIndex++
+      ) {
+        var word = RING_WORDS[ringIndex];
+        if (!word) {
+          throw new Error(
+            "PLAYABLE_SEAS 超出 CSS 已有环样式（" + RING_WORDS.length + " 个）",
+          );
+        }
+        ringSlots.push([
+          ringIndex,
+          "c2-ring--" + word,
+          "c2-ring-index--" + word,
+        ]);
+      }
+      var mainRings = ringSlots
+        .map(function (slot) {
+          return renderSeaRing(slot[0], slot[1], slot[2]);
         })
         .join("");
 
-      // 海域 4–8 本轮不做（2026-11-10 决定），入口已从界面移除。
-      // 解锁逻辑仍在 js/app.js 里，未来要做时按原样加回 .c2-mini-row 即可。
+      // 当前只做三海域；海域内的路由统一由 js/ui/sea.js 生成。
 
       window.requestAnimationFrame(mount);
       return `
         <article class="scr scr-c2" data-sea="${selectedSea}" aria-label="C2 主界面">
           <h1 class="visually-hidden">C2 主界面</h1>
-          <img class="scene-bg c2-bg" src="assets/主界面底图.png" alt="" draggable="false">
-          <img class="c2-whale" src="assets/主角-小鲸鱼.png" alt="" draggable="false">
 
           <div class="c2-title" data-sea="${selectedSea}">
             <p class="c2-title__meta">海域</p>
@@ -219,43 +207,23 @@
             <span class="c2-side-line">海域</span>
             <span class="c2-side-line">选择</span>
           </p>
+          <span class="c2-sel-panel" aria-hidden="true"></span>
 
           <nav class="c2-tools" aria-label="设置与工具">
-            <button class="c2-tool" type="button" data-nav="c10" aria-label="设置">
+            <button class="c2-tool" type="button" data-nav="c2-1" aria-label="设置">
               <span class="c2-tool__icon">${Icons.settings}</span>
             </button>
-            <button class="c2-tool" type="button" data-nav="c8" aria-label="皮肤">
+            <button class="c2-tool" type="button" data-nav="c2-3" aria-label="外观">
               <span class="c2-tool__icon">${Icons.skin}</span>
             </button>
-            <button class="c2-tool" type="button" data-nav="c9" aria-label="图鉴">
+            <button class="c2-tool" type="button" data-nav="c2-4" aria-label="图鉴">
               <span class="c2-tool__icon">${Icons.collection}</span>
+            </button>
+            <button class="c2-tool" type="button" data-nav="c2-2" aria-label="成就">
+              <span class="c2-tool__icon">${Icons.achievement}</span>
             </button>
           </nav>
 
-          ${allComplete ? '<p class="c2-complete" role="status">全部完成</p>' : ""}
-
-          <svg
-            class="c2-arc"
-            viewBox="0 0 235 308"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <path
-              class="c2-arc__a"
-              d="M22.5676 12.5121C-2.11472 107.274 3.17085 296.534 221.772 295.487"
-              vector-effect="non-scaling-stroke"
-            />
-            <path
-              class="c2-arc__b"
-              d="M22.5676 12.5121C-2.11472 107.274 3.17085 296.534 221.772 295.487"
-              vector-effect="non-scaling-stroke"
-            />
-            <path
-              class="c2-arc__c"
-              d="M22.5676 12.5121C-2.11472 107.274 3.17085 296.534 221.772 295.487"
-              vector-effect="non-scaling-stroke"
-            />
-          </svg>
           <span class="c2-bubble c2-bubble--a" aria-hidden="true"></span>
           <span class="c2-bubble c2-bubble--b" aria-hidden="true"></span>
           <span class="c2-bubble c2-bubble--c" aria-hidden="true"></span>

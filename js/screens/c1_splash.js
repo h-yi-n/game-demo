@@ -3,14 +3,16 @@
 
   function teardown() {
     document.removeEventListener("click", onClick, false);
-    document.removeEventListener("keydown", onKeydown, true);
+    document.removeEventListener("actioninputhold", onActionHold, false);
+    document.removeEventListener("app:navigate", onScreenNavigate, false);
     leaving = false;
   }
 
   function mount() {
     teardown();
     document.addEventListener("click", onClick, false);
-    document.addEventListener("keydown", onKeydown, true);
+    document.addEventListener("actioninputhold", onActionHold, false);
+    document.addEventListener("app:navigate", onScreenNavigate, false);
   }
 
   function leave(next) {
@@ -20,6 +22,10 @@
       window.App.navigate(next);
       return;
     }
+    /* 先把下一家族的视频底图放到开屏下面，再让开屏淡出。
+       不能等开屏透明后才切背景，否则两屏之间必然露出纯色舞台底色。 */
+    var nextFamily = next === "c2" ? "c2" : (next === "p1" || next === "p2" ? "p" : null);
+    if (nextFamily && window.Scene && window.Scene.bg) window.Scene.bg(nextFamily);
     leaving = true;
     scr.classList.add("is-leaving");
 
@@ -34,56 +40,51 @@
     }, ms);
   }
 
-  function onClick(event) {
-    var button =
-      event.target.closest && event.target.closest(".c1-start, .c1-switch");
-    if (!button) return;
-    leave(button.classList.contains("c1-switch") ? "p1" : "c2");
+  function onScreenNavigate(event) {
+    if (event.detail && event.detail.screen !== "c1") teardown();
   }
 
-  function onKeydown(event) {
-    if (event.repeat) return;
-    /* 与 app.js 的 handleKeydown 保持同一套让位规则：
-       焦点在按钮上时不接管，交给按钮自己的点击 */
-    if (event.target && event.target.closest && event.target.closest("button")) {
-      return;
-    }
+  function onClick(event) {
+    var button = event.target.closest && event.target.closest(".c1-switch");
+    if (!button) return;
+    leave("p1");
+  }
+
+  function onActionHold(event) {
+    var action = event.detail && event.detail.action;
     if (
-      event.key === "Shift" ||
-      event.key === "Control" ||
-      event.key === "Alt" ||
-      event.key === "Meta"
+      action &&
+      window.ActionInput.satisfies(action.id, "mouth")
     ) {
-      return;
+      leave("c2");
     }
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    leave("c2");
   }
 
   window.Screens.c1 = {
     render() {
       window.requestAnimationFrame(mount);
+      /* 底图是循环视频。prefers-reduced-motion 时不自动播放，
+         停在 poster 上——等于回到"静态底图"，正是这个偏好要的结果 */
+      const autoplay = window.matchMedia("(prefers-reduced-motion: reduce)")
+        .matches
+        ? ""
+        : "autoplay";
       return `
       <article class="scr scr-c1" aria-label="C1 开屏">
         <div class="c1-cam" aria-hidden="true">
-          <img
+          <video
             class="scene-bg c1-bg"
-            src="assets/开屏图.png"
-            alt=""
-            draggable="false"
-          />
-          <img
-            class="c1-whale"
-            src="assets/开屏鲸鱼.png"
-            alt=""
-            draggable="false"
-          />
+            src="assets/video/开屏图动画.mp4"
+            poster="assets/video/开屏图动画-封面.jpg"
+            preload="auto"
+            muted
+            loop
+            playsinline
+            ${autoplay}
+          ></video>
         </div>
         <div class="c1-sheen" aria-hidden="true"></div>
-        <button class="c1-start" type="button">
-          <span class="visually-hidden">任意键或点按屏幕进入主界面</span>
-        </button>
+        <div class="c1-start" aria-hidden="true"></div>
         <button
           class="c1-switch"
           type="button"
